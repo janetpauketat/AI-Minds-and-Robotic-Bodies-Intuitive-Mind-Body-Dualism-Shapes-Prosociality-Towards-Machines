@@ -1,0 +1,1716 @@
+---
+title: "Experiment1_AIMS_Supp_2025_unweighted"
+author: 
+date: 
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r workflow prep, echo=FALSE}
+
+# Load packages and functions
+library(readxl)
+library(openxlsx)
+library(tidyverse) 
+library(emmeans)
+library(car)
+library(performance)
+library(ggfortify)
+library(broom)
+library(QuantPsyc)
+library(lmtest)
+library(patchwork)
+
+source("Functions_Rcode.R")
+
+#Load data
+supp <- read_excel("AIMS_Supplement_2025_indices.xlsx")
+
+# Recode condition variables to factors
+supp <- supp %>% 
+  mutate(condition = as.factor(condition),
+         entitytype = as.factor(entitytype),
+         mentalfaculty = as.factor(mentalfaculty),
+         gender = as.factor(gender),
+         raceethnicity = as.factor(raceethnicity),
+         region = as.factor(region),
+         education_recode = as.factor(education_recode),
+         diet = as.factor(diet),
+         religion = as.factor(religion),
+         religionRNR = as.factor(religionRNR),
+         own = as.factor(own),
+         work = as.factor(work),
+         smart = as.factor(smart)
+         )
+
+# Condition assignment numbers
+ConditionN <- supp %>% 
+  group_by(condition) %>% 
+  summarise(no_rows = length(condition))
+print(ConditionN)
+
+EntityN <- supp %>% 
+  group_by(entitytype) %>% 
+  summarise(no_rows = length(entitytype))
+print(EntityN)
+
+FacultyN <- supp %>% 
+  group_by(mentalfaculty) %>% 
+  summarise(no_rows = length(mentalfaculty))
+print(FacultyN)
+
+# Comprehension check numbers
+Compcheckper <- supp %>%
+  group_by(condition, manipcheck1) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  group_by(condition) %>%
+  mutate(percent = n / sum(n) * 100) %>%
+  ungroup()
+print(Compcheckper)
+
+# Relabel condition categories
+Compcheckper <- Compcheckper %>%
+  mutate(condition = case_match(condition,
+    "agentAI"        ~ "AIs with agency",
+    "agentrobot"     ~ "Robots with agency",
+    "agentrobotAI"   ~ "Robots/AIs with agency",
+    "AI"             ~ "AIs",
+    "emotionAI"      ~ "AIs with emotion",
+    "emotionrobot"   ~ "Robots with emotion",
+    "emotionrobotAI" ~ "Robots/AIs with emotion",
+    "reasoningAI"        ~ "AIs with reasoning",
+    "reasoningrobot"     ~ "Robots with reasoning",
+    "reasoningrobotAI"   ~ "Robots/AIs with reasoning",
+    "robot"          ~ "Robots",
+    "robotAI"        ~ "Robots/AIs",
+    "sentienceAI"        ~ "AIs with sentience",
+    "sentiencerobot"     ~ "Robots with sentience",
+    "sentiencerobotAI"   ~ "Robots/AIs with sentience",
+    .default = condition
+  ))
+
+# Generate 15 colorblind-friendly colors using base R 
+palette_15 <- hcl.colors(16, palette = "Dark 3")
+
+# Plot
+compcheckplot <- ggplot(Compcheckper, aes(x = factor(condition), y = percent, fill = factor(manipcheck1))) +
+  geom_col(position = "stack") +
+  geom_text(aes(label = ifelse(percent >= 5, paste0(round(percent, 1), "%"), "")),
+            position = position_stack(vjust = 0.5),
+            size = 3, color = "white", family = "serif") +
+  scale_fill_manual(values = palette_15) +
+  labs(
+    title = "Percentage of Comprehension Check Responses by Condition",
+    x = "Experimental Treatment",
+    y = "Percent of Respondents",
+    fill = "Response"
+  ) +
+  theme_minimal(base_family = "serif") +
+  theme(
+    text = element_text(family = "serif"),
+    axis.text.x = element_text(angle = 45, hjust = 1, family = "serif"),
+    legend.position = "right"
+  )
+
+compcheckplot
+
+ggsave("manipcheck_stacked.png", plot = compcheckplot, width = 12, height = 7, dpi = 300)
+
+# Variable prep for regressions
+
+# Relevel factor predictors for largest group
+supp <- supp %>%
+  mutate(
+    raceethnicity = fct_relevel(raceethnicity, "White"),
+    region = fct_relevel(region, "South"),
+    religion = fct_relevel(religion, "Protestant"),
+    diet = fct_relevel(diet, "Meat-eater"),
+    mentalfaculty = fct_relevel(mentalfaculty, "none"),
+    entitytype = fct_relevel(entitytype, "robotAI"))
+
+```
+
+```{r correlations}
+
+set.seed(12345)
+
+# Define the list of dependent variables
+dependent_vars <- c("MPC", "MPAC", "AITC", "SARC", "PAAC", 
+                    "GAC", "GIC", "GLC", "ATC", "CTC", "PTRC", "PTSC")
+
+# MPC = Mind Perception
+# MPAC = Mind Authenticity
+
+# Moral Attitudes
+# AITC = Moral Treatment
+# SARC = Support for AI Rights
+# PAAC = Pro-AI Activism
+
+# Social Attitudes:
+# GAC = Godspeed Anthropomorphism
+# GLC = Godspeed Likeability
+# CTC = Cognitive Trust
+# ATC = Affective Trust
+# PTRC = Perceived Realistic Threat
+# PTSC = Perceived Symbolic Threat
+
+# Create correlation table for mind perception, social attitudes, and moral attitudes
+correlation_workbook <- createWorkbook()
+options("openxlsx.numFmt" = "0.000")
+wrap_format <- createStyle(numFmt = "0.00", wrapText = TRUE)
+
+# Unweighted descriptive statistics (M, SD, N) for each variable
+desc_stats <- tibble(
+  variable = dependent_vars,
+  M  = sapply(dependent_vars, function(v) mean(supp[[v]], na.rm = TRUE)),
+  SD = sapply(dependent_vars, function(v) sd(supp[[v]], na.rm = TRUE)),
+  N  = sapply(dependent_vars, function(v) sum(!is.na(supp[[v]])))
+)
+
+# Unweighted (pairwise-complete) correlation matrix
+r_mat <- cor(supp[, dependent_vars], use = "pairwise.complete.obs")
+
+k <- length(dependent_vars)
+p_mat <- matrix(NA_real_, nrow = k, ncol = k,
+                 dimnames = list(dependent_vars, dependent_vars))
+
+for (i in 2:k) {
+  for (j in 1:(i - 1)) {
+    test <- cor.test(supp[[dependent_vars[i]]], supp[[dependent_vars[j]]])
+    p_mat[i, j] <- test$p.value
+  }
+}
+
+# FDR correction (Benjamini-Hochberg) across all pairwise correlations
+lower_tri_idx <- which(lower.tri(p_mat), arr.ind = TRUE)   # positions of all tests
+raw_p         <- p_mat[lower_tri_idx]
+fdr_p         <- p.adjust(raw_p, method = "BH")
+ 
+fdr_mat <- matrix(NA_real_, nrow = k, ncol = k,
+                   dimnames = list(dependent_vars, dependent_vars))
+fdr_mat[lower_tri_idx] <- fdr_p
+ 
+n_tests <- length(raw_p)   # total number of correlations corrected for
+n_fdr_sig <- sum(fdr_p < .10)
+ 
+# APA-style formatting helpers
+# Correlations (and other 0-1 bounded stats) drop the leading zero per APA 7
+apa_r <- function(x, digits = 2) {
+  sub("^(-?)0\\.", "\\1.", sprintf(paste0("%.", digits, "f"), x))
+}
+ 
+# Means/SDs keep the leading zero
+apa_num <- function(x, digits = 2) {
+  sprintf(paste0("%.", digits, "f"), x)
+}
+ 
+stars_for <- function(p) {
+  dplyr::case_when(
+    is.na(p) ~ "",
+    p < .001 ~ "***",
+    p < .01  ~ "**",
+    p < .05  ~ "*",
+    TRUE     ~ ""
+  )
+}
+ 
+# Build lower-triangle correlation strings, e.g. ".34**" or ".34**†" if the
+# correlation also survives Benjamini-Hochberg FDR correction at q < .10
+cor_strings <- matrix("", nrow = k, ncol = k,
+                       dimnames = list(dependent_vars, dependent_vars))
+for (i in 2:k) {
+  for (j in 1:(i - 1)) {
+    fdr_flag <- ifelse(!is.na(fdr_mat[i, j]) && fdr_mat[i, j] < .10, "\u2020", "")
+    cor_strings[i, j] <- paste0(apa_r(r_mat[i, j]), stars_for(p_mat[i, j]), fdr_flag)
+  }
+}
+ 
+# Assemble the APA table
+apa_table <- desc_stats %>%
+  mutate(
+    Variable = paste0(row_number(), ". ", variable),
+    M  = apa_num(M),
+    SD = apa_num(SD)
+  ) %>%
+  dplyr::select(Variable, N, M, SD)
+ 
+cor_cols <- as.data.frame(cor_strings[, 1:(k - 1), drop = FALSE],
+                           stringsAsFactors = FALSE)
+names(cor_cols) <- as.character(1:(k - 1))
+ 
+apa_table <- bind_cols(apa_table, cor_cols)
+ 
+# Write to Excel
+addWorksheet(correlation_workbook, "APA Correlations")
+ 
+writeData(
+  correlation_workbook, "APA Correlations", apa_table,
+  startRow = 1, startCol = 1, headerStyle = wrap_format
+)
+ 
+addStyle(correlation_workbook, "APA Correlations", wrap_format,
+         rows = 1, cols = 1:ncol(apa_table), gridExpand = TRUE)
+ 
+setColWidths(
+  correlation_workbook, "APA Correlations",
+  cols = 1:ncol(apa_table),
+  widths = c(16, 6, 6, 6, rep(6, k - 1))
+)
+ 
+# Variable key + significance legend, placed a couple of rows below the table
+note_row <- nrow(apa_table) + 3
+var_key <- paste(paste0(seq_along(dependent_vars), " = ", dependent_vars), collapse = "; ")
+ 
+writeData(
+  correlation_workbook, "APA Correlations",
+  paste0("Note. ", var_key, ". *p < .05, **p < .01, ***p < .001. ",
+         "\u2020 correlation remains significant after Benjamini-Hochberg FDR correction ",
+         "for all ", n_tests, " correlations conducted (q < .10; ", n_fdr_sig,
+         " of ", n_tests, " correlations survived correction). All statistics reported here ",
+         "are unweighted."),
+  startRow = note_row, startCol = 1
+)
+ 
+mergeCells(correlation_workbook, "APA Correlations",
+           cols = 1:ncol(apa_table), rows = note_row)
+addStyle(correlation_workbook, "APA Correlations",
+         createStyle(wrapText = TRUE, valign = "top"),
+         rows = note_row, cols = 1:ncol(apa_table))
+setRowHeights(correlation_workbook, "APA Correlations", rows = note_row, heights = 60)
+ 
+# Save workbook
+saveWorkbook(correlation_workbook, "correlations_paper_unweighted.xlsx", overwrite = TRUE)
+
+```
+
+```{r regressions}
+
+set.seed(12345)
+ 
+# Define the list of dependent variables
+dependent_vars <- c("MPC", "MPAC", "AITC", "SARC", "PAAC", 
+                    "GAC", "GIC", "GLC", "ATC", "CTC", "PTRC", "PTSC")
+ 
+# MPC = Mind Perception
+# MPAC = Mind Authenticity
+ 
+# Moral Attitudes:
+# AITC = Moral Treatment
+# SARC = Support for AI Rights
+# PAAC = Pro-AI Activism
+ 
+# Social Attitudes:
+# GAC = Godspeed Anthropomorphism
+# GLC = Godspeed Likeability
+# GIC = Godspeed Intelligence
+# CTC = Cognitive Trust
+# ATC = Affective Trust
+# PTRC = Perceived Realistic Threat
+# PTSC = Perceived Symbolic Threat
+ 
+# Panel titles and tags
+title_map <- c(
+  MPC  = "Mind Perception",
+  MPAC = "Mind Authenticity",
+  AITC = "Moral Treatment",
+  SARC = "Support for AI Rights",
+  PAAC = "Pro-AI Activism",
+  GAC  = "Godspeed Anthropomorphism",
+  GLC  = "Godspeed Likability",
+  GIC  = "Godspeed Intelligence",
+  CTC  = "Cognitive Trust",
+  ATC  = "Affective Trust",
+  PTRC = "Realistic Threat",
+  PTSC = "Symbolic Threat"
+)
+ 
+tag_map <- c(
+  MPC  = "A",
+  MPAC = "B",
+  AITC = "A",
+  SARC = "B",
+  PAAC = "C",
+  GAC  = "A",
+  GLC  = "B",
+  GIC  = "C",
+  CTC  = "D",
+  ATC  = "E",
+  PTRC = "F",
+  PTSC = "G"
+)
+ 
+# Per-variable scale specs (min, max, and axis breaks) for each DV y-axes
+scale_specs <- list(
+  MPC  = list(min = 0, max = 100, breaks = seq(0, 100, by = 25)),
+  MPAC = list(min = 0, max = 100, breaks = seq(0, 100, by = 25)),
+  AITC = list(min = 1, max = 7,   breaks = seq(1, 7, by = 1)),
+  SARC = list(min = 1, max = 7,   breaks = seq(1, 7, by = 1)),
+  PAAC = list(min = 1, max = 7,   breaks = seq(1, 7, by = 1)),
+  GAC  = list(min = 0, max = 10,  breaks = seq(0, 10, by = 2.5)),
+  GLC  = list(min = 0, max = 10,  breaks = seq(0, 10, by = 2.5)),
+  GIC  = list(min = 0, max = 10,  breaks = seq(0, 10, by = 2.5)),
+  CTC  = list(min = 1, max = 7,   breaks = seq(1, 7, by = 1)),
+  ATC  = list(min = 1, max = 7,   breaks = seq(1, 7, by = 1)),
+  PTRC = list(min = 0, max = 100, breaks = seq(0, 100, by = 25)),
+  PTSC = list(min = 0, max = 100, breaks = seq(0, 100, by = 25))
+)
+ 
+# Reusable paper theme layer for plots
+paper_theme <- function(title, tag, y_min, y_max, y_breaks) {
+  headroom <- 0.05 * (y_max - y_min)
+  list(
+    coord_cartesian(ylim = c(y_min, y_max + headroom)),
+    scale_y_continuous(breaks = y_breaks),
+    theme_classic(base_family = "serif"),
+    theme(
+      legend.position = "none",
+      plot.title = element_text(hjust = 0, vjust = 1, margin = margin(b = 3), size = 18, family = "serif", face = "plain"),
+      plot.title.position = "plot",
+      plot.tag = element_text(hjust = 0, vjust = 0, margin = margin(b = 5), size = 18, family = "serif", face = "plain"),
+      plot.margin = margin(t = 5, b = 5),
+      axis.title.x = element_blank(),
+      axis.title.y = element_blank(),
+      axis.text = element_text(family = "serif", face = "plain", size = 14),
+      axis.text.x = element_text(angle = 0, hjust = 1, vjust = 1),
+      legend.text = element_text(family = "serif", face = "plain", size = 14),
+      legend.title = element_blank()
+    ),
+    labs(title = title, tag = tag)
+  )
+}
+ 
+# Helper functions for reporting statistics
+ 
+# Compute standardized ("beta") coefficients for an lm model. This
+# standardizes both the outcome and every column of the model matrix
+# (including dummy-coded factor levels), then rescales the unstandardized
+# coefficients:
+#   beta_std_j = beta_j * sd(x_j) / sd(y)
+# Note: standardized coefficients for dummy-coded categorical predictors
+# should be interpreted with some caution (this is the same convention
+# used by packages like lm.beta for ordinary lm() models).
+compute_std_betas <- function(model_obj) {
+  mm <- model.matrix(model_obj)
+  y  <- model.response(model.frame(model_obj))
+ 
+  sd_y <- sd(y)
+  coefs <- coef(model_obj)
+ 
+  std_betas <- sapply(names(coefs), function(term) {
+    if (term == "(Intercept)") return(NA_real_)
+    sd_x <- sd(mm[, term])
+    unname(coefs[term]) * sd_x / sd_y
+  })
+  std_betas
+}
+ 
+# Create workbook
+mfe_regression_workbook <- createWorkbook()
+options("openxlsx.numFmt" = "0.000")
+wrap_format <- createStyle(numFmt = "0.00", wrapText = TRUE)
+ 
+# Create an empty list to store results
+results_list_mfe <- list()
+ 
+# Create an empty list to hold the individual plots
+plots_mf <- list()
+plots_et <- list()
+ 
+ 
+# Create directory for plots if it doesn't exist
+if (!dir.exists("adjusted main effects plots unweighted")) {
+  dir.create("adjusted main effects plots unweighted")
+}
+ 
+# Loop through each dependent variable
+for (dv in dependent_vars) {
+  
+  # Create formula dynamically
+  formula_mfe <- as.formula(paste(dv, "~ agecen + gender + raceethnicity + intcen + 
+                                  mentalfaculty + entitytype"))
+  
+  # Restrict the data to rows with complete data on the DV and all
+  # predictors, so that the full model and the null (intercept-only) model
+  # used for R^2 below are fit on exactly the same sample.
+  vars_needed <- c(dv, "agecen", "gender", "raceethnicity", "intcen",
+                    "mentalfaculty", "entitytype")
+  complete_idx <- complete.cases(supp[, vars_needed])
+  data_dv <- supp[complete_idx, ]
+  
+  # Fit model (unweighted OLS)
+  model_mfe <- lm(formula = formula_mfe, data = data_dv)
+  
+  # R^2 for the unweighted model
+  r2_mfe <- summary(model_mfe)$r.squared
+  
+  # Omnibus F-statistic and its degrees of freedom (numerator, denominator)
+  f_mfe <- summary(model_mfe)$fstatistic
+  
+  # p-value for the omnibus F-test
+  f_pvalue_mfe <- pf(f_mfe[["value"]], f_mfe[["numdf"]], f_mfe[["dendf"]], lower.tail = FALSE)
+  
+  # Degrees of freedom used for the coefficient t-tests
+  df_mfe <- df.residual(model_mfe)
+  
+  # Standardized beta coefficients
+  std_beta_mfe <- compute_std_betas(model_mfe)
+  
+  # Get confidence intervals
+  ci_mf <- confint(model_mfe)
+  
+  # Tidy model results
+  m_mfe <- tidy(model_mfe)
+  ci_mfe <- as.data.frame(ci_mf)
+  names(ci_mfe) <- c("conf.low", "conf.high")
+  
+  # Append confidence intervals to results table
+  m_mfe <- cbind(m_mfe, ci_mfe)
+  
+  # Add standardized beta (matched to term names), R-squared, F-stats, and df for
+  # APA-style reporting
+  m_mfe$std.beta  <- std_beta_mfe[m_mfe$term]
+  m_mfe$r.squared <- r2_mfe
+  m_mfe$df        <- df_mfe
+    m_mfe$f.stat    <- f_mfe[["value"]]
+  m_mfe$f.df.num  <- f_mfe[["numdf"]]
+  m_mfe$f.df.den  <- f_mfe[["dendf"]]
+  m_mfe$f.pvalue  <- f_pvalue_mfe
+  
+  # Add significance stars based on raw p-values
+  m_mfe$sig <- get_sig_stars(m_mfe$p.value)
+  
+  # Add FDR-corrected p-values
+  m_mfe$p.fdr <- p.adjust(m_mfe$p.value, method = "fdr")
+  m_mfe$sig.fdr <- get_sig_stars(m_mfe$p.fdr)
+ 
+  
+  # Store results in list
+  results_list_mfe[[dv]] <- m_mfe
+  
+  # Add worksheet for each dependent variable
+  addWorksheet(mfe_regression_workbook, dv)
+  writeData(mfe_regression_workbook, sheet = dv, m_mfe)
+  
+  #-----------------------------------------------------------
+  # Create adjusted means violin plots for mental faculty
+  #-----------------------------------------------------------
+  
+  # Use emmeans to get adjusted means for mental faculty
+  emm_mf <- emmeans(model_mfe, ~ mentalfaculty, 
+                    nuisance = c("gender", "raceethnicity"),
+                    at = list(agecen = 0))
+  pred_data_mf <- as.data.frame(emm_mf)
+  
+  # Rename columns and create confidence bands
+  pred_data_mf <- pred_data_mf %>%
+    rename(fitted = emmean, se = SE) %>%
+    mutate(
+      lower = fitted - se,
+      upper = fitted + se,
+      mentalfaculty_label = case_when(
+        mentalfaculty == "none" ~ "Control",
+        mentalfaculty == "agent" ~ "Agency",
+        mentalfaculty == "emotion" ~ "Emotion",
+        mentalfaculty == "reasoning" ~ "Reasoning",
+        mentalfaculty == "sentience" ~ "Sentience",
+        TRUE ~ as.character(mentalfaculty)
+      ),
+      mentalfaculty_label = factor(mentalfaculty_label,
+                                  levels = c("Sentience", "Emotion", "Reasoning", "Agency", "Control"))
+    )
+  
+  # Prepare raw data for violin plot
+  raw_data_mf <- supp %>%
+    filter(!is.na(!!sym(dv)) & !is.na(mentalfaculty)) %>%
+    mutate(
+      mentalfaculty_label = case_when(
+        mentalfaculty == "none" ~ "Control",
+        mentalfaculty == "agent" ~ "Agency",
+        mentalfaculty == "emotion" ~ "Emotion",
+        mentalfaculty == "reasoning" ~ "Reasoning",
+        mentalfaculty == "sentience" ~ "Sentience",
+        TRUE ~ as.character(mentalfaculty)
+      ),
+      mentalfaculty_label = factor(mentalfaculty_label,
+                                  levels = c("Sentience", "Emotion", "Reasoning", "Agency", "Control"))
+    )
+  
+  # Perform pairwise comparisons for mental faculty
+  pairs_mf <- pairs(emm_mf, adjust = "none")
+  pairs_mf_df <- as.data.frame(pairs_mf)
+  
+  # Add significance stars to comparisons
+  pairs_mf_df$sig <- ifelse(pairs_mf_df$p.value < 0.001, "***",
+                            ifelse(pairs_mf_df$p.value < 0.01, "**",
+                                   ifelse(pairs_mf_df$p.value < 0.05, "*", "")))
+  
+  # Filter for significant comparisons only
+  sig_pairs_mf <- pairs_mf_df %>% filter(sig != "")
+  
+  # Plot violin plot with adjusted means for mental faculty
+  p_adj_mf <- ggplot() +
+    geom_violin(data = raw_data_mf, 
+                aes(x = mentalfaculty_label, y = !!sym(dv)), 
+                fill = "#FFD700", alpha = 0.3, color = "#FFD700") +
+    geom_point(data = pred_data_mf, 
+               aes(x = mentalfaculty_label, y = fitted), 
+               size = 4, color = "#FFD700") +
+    geom_errorbar(data = pred_data_mf, 
+                  aes(x = mentalfaculty_label, ymin = lower, ymax = upper), 
+                  width = 0.2, linewidth = 1, color = "#FFD700") +
+    labs(x = "Mental Faculty")
+  
+  # Add significance bars if there are significant comparisons
+  if (nrow(sig_pairs_mf) > 0) {
+    # Get the y-axis range for positioning significance bars
+    y_range <- range(raw_data_mf[[dv]], na.rm = TRUE)
+    y_max <- max(pred_data_mf$upper, na.rm = TRUE)
+    y_step <- (y_range[2] - y_max) / (nrow(sig_pairs_mf) + 2)
+    
+    for (i in 1:nrow(sig_pairs_mf)) {
+      # Parse the contrast to get group names
+      contrast_parts <- strsplit(as.character(sig_pairs_mf$contrast[i]), " - ")[[1]]
+      group1 <- gsub("^\\(|\\)$", "", contrast_parts[1])
+      group2 <- gsub("^\\(|\\)$", "", contrast_parts[2])
+      
+      # Map to labels
+      group1_label <- pred_data_mf$mentalfaculty_label[pred_data_mf$mentalfaculty == group1][1]
+      group2_label <- pred_data_mf$mentalfaculty_label[pred_data_mf$mentalfaculty == group2][1]
+      
+      if (!is.na(group1_label) && !is.na(group2_label)) {
+        x1 <- which(levels(factor(pred_data_mf$mentalfaculty_label)) == group1_label)
+        x2 <- which(levels(factor(pred_data_mf$mentalfaculty_label)) == group2_label)
+        
+        y_pos <- y_max + (i * y_step)
+        
+        p_adj_mf <- p_adj_mf +
+          annotate("segment", x = x1, xend = x2, y = y_pos, yend = y_pos, linewidth = 0.5) +
+          annotate("segment", x = x1, xend = x1, y = y_pos, yend = y_pos - y_step/4, linewidth = 0.5) +
+          annotate("segment", x = x2, xend = x2, y = y_pos, yend = y_pos - y_step/4, linewidth = 0.5) +
+          annotate("text", x = (x1 + x2)/2, y = y_pos + y_step/4, 
+                   label = sig_pairs_mf$sig[i], size = 5)
+      }
+    }
+  }
+  
+  # Apply the shared "paper" theme (serif font, coord_cartesian, breaks,
+  # short title, panel tag) using this DV's own scale
+  spec_dv <- scale_specs[[dv]]
+  p_adj_mf <- p_adj_mf + paper_theme(title_map[[dv]], tag_map[[dv]],
+                                      spec_dv$min, spec_dv$max, spec_dv$breaks)
+  
+  # Store for later combining
+  plots_mf[[dv]] <- p_adj_mf
+  
+  # Save plot
+  ggsave(filename = paste0("adjusted main effects plots unweighted/", dv, "_mentalfaculty_paper.png"),
+         plot = p_adj_mf,
+         width = 8,
+         height = 6,
+         dpi = 300)
+ 
+  #-----------------------------------------------------------
+  # Create adjusted means violin plots for entity type
+  #-----------------------------------------------------------
+  
+  # Use emmeans to get adjusted means for entity type
+  emm_et <- emmeans(model_mfe, ~ entitytype, 
+                    nuisance = c("gender", "raceethnicity"),
+                    at = list(agecen = 0, incomecen = 0, polcen = 0))
+  pred_data_et <- as.data.frame(emm_et)
+  
+  # Rename columns, recode entity-type labels, and create confidence bands
+  pred_data_et <- pred_data_et %>%
+    rename(fitted = emmean, se = SE) %>%
+    mutate(
+      lower = fitted - se,
+      upper = fitted + se,
+      entitytype_label = case_when(
+        as.character(entitytype) == "AI" ~ "AIs",
+        as.character(entitytype) == "robot" ~ "Robots",
+        as.character(entitytype) == "robotAI" ~ "Robots/AIs",
+        TRUE ~ as.character(entitytype)
+      )
+    )
+  
+  # Prepare raw data for violin plot (same relabeling)
+  raw_data_et <- supp %>%
+    filter(!is.na(!!sym(dv)) & !is.na(entitytype)) %>%
+    mutate(
+      entitytype_label = case_when(
+        as.character(entitytype) == "AI" ~ "AIs",
+        as.character(entitytype) == "robot" ~ "Robots",
+        as.character(entitytype) == "robotAI" ~ "Robots/AIs",
+        TRUE ~ as.character(entitytype)
+      )
+    )
+  
+  # Perform pairwise comparisons for entity type
+  pairs_et <- pairs(emm_et, adjust = "none")
+  pairs_et_df <- as.data.frame(pairs_et)
+  
+  # Add significance stars to comparisons
+  pairs_et_df$sig <- ifelse(pairs_et_df$p.value < 0.001, "***",
+                            ifelse(pairs_et_df$p.value < 0.01, "**",
+                                   ifelse(pairs_et_df$p.value < 0.05, "*", "")))
+  
+  # Filter for significant comparisons only
+  sig_pairs_et <- pairs_et_df %>% filter(sig != "")
+  
+  # Plot violin plot with adjusted means for entity type
+  p_adj_et <- ggplot() +
+    geom_violin(data = raw_data_et, 
+                aes(x = entitytype_label, y = !!sym(dv)), 
+                fill = "#1A1A2E", alpha = 0.3, color = "#1A1A2E") +
+    geom_point(data = pred_data_et, 
+               aes(x = entitytype_label, y = fitted), 
+               size = 4, color = "#1A1A2E") +
+    geom_errorbar(data = pred_data_et, 
+                  aes(x = entitytype_label, ymin = lower, ymax = upper), 
+                  width = 0.2, linewidth = 1, color = "#1A1A2E") +
+    labs(x = "Entity Type")
+  
+  # Add significance bars if there are significant comparisons
+  if (nrow(sig_pairs_et) > 0) {
+    # Get the y-axis range for positioning significance bars
+    y_range <- range(raw_data_et[[dv]], na.rm = TRUE)
+    y_max <- max(pred_data_et$upper, na.rm = TRUE)
+    y_step <- (y_range[2] - y_max) / (nrow(sig_pairs_et) + 2)
+    
+    for (i in 1:nrow(sig_pairs_et)) {
+      # Parse the contrast to get group names
+      contrast_parts <- strsplit(as.character(sig_pairs_et$contrast[i]), " - ")[[1]]
+      group1 <- gsub("^\\(|\\)$", "", contrast_parts[1])
+      group2 <- gsub("^\\(|\\)$", "", contrast_parts[2])
+      
+      # Map to labels 
+      group1_label <- pred_data_et$entitytype_label[pred_data_et$entitytype == group1][1]
+      group2_label <- pred_data_et$entitytype_label[pred_data_et$entitytype == group2][1]
+      
+      if (!is.na(group1_label) && !is.na(group2_label)) {
+        x1 <- which(levels(factor(pred_data_et$entitytype_label)) == group1_label)
+        x2 <- which(levels(factor(pred_data_et$entitytype_label)) == group2_label)
+        
+        y_pos <- y_max + (i * y_step)
+        
+        p_adj_et <- p_adj_et +
+          annotate("segment", x = x1, xend = x2, y = y_pos, yend = y_pos, linewidth = 0.5) +
+          annotate("segment", x = x1, xend = x1, y = y_pos, yend = y_pos - y_step/4, linewidth = 0.5) +
+          annotate("segment", x = x2, xend = x2, y = y_pos, yend = y_pos - y_step/4, linewidth = 0.5) +
+          annotate("text", x = (x1 + x2)/2, y = y_pos + y_step/4, 
+                   label = sig_pairs_et$sig[i], size = 5)
+      }
+    }
+  }
+  
+  # Apply the shared paper theme
+  p_adj_et <- p_adj_et + paper_theme(title_map[[dv]], tag_map[[dv]],
+                                      spec_dv$min, spec_dv$max, spec_dv$breaks)
+  
+  # Store for later combining
+  plots_et[[dv]] <- p_adj_et
+  
+  # Save plot
+  ggsave(filename = paste0("adjusted main effects plots unweighted/", dv, "_entitytype_paper.png"),
+         plot = p_adj_et,
+         width = 8,
+         height = 6,
+         dpi = 300)
+}
+ 
+# Combine figures with patchwork
+FigMindPerception_mf <- (plots_mf[["MPC"]] | plots_mf[["MPAC"]]) +
+  plot_layout(guides = "collect", widths = c(.7, .7)) +
+  plot_annotation() &
+  theme(
+    legend.position = "bottom",
+    plot.margin = margin(.1, .1, .1, .1, unit = "in")
+  )
+FigMindPerception_mf
+ 
+FigMindPerception_et <- (plots_et[["MPC"]] | plots_et[["MPAC"]]) +
+  plot_layout(guides = "collect", widths = c(.7, .7)) +
+  plot_annotation() &
+  theme(
+    legend.position = "bottom",
+    plot.margin = margin(.1, .1, .1, .1, unit = "in")
+  )
+FigMindPerception_et
+ 
+ggsave("adjusted main effects plots unweighted/FigMindPerception_mentalfaculty.png",
+       FigMindPerception_mf, width = 14, height = 6, dpi = 300)
+ggsave("adjusted main effects plots unweighted/FigMindPerception_mentalfaculty.pdf",
+       FigMindPerception_mf, width = 14, height = 6, dpi = 300)
+ggsave("adjusted main effects plots unweighted/FigMindPerception_entitytype.png",
+       FigMindPerception_et, width = 14, height = 6, dpi = 300)
+ggsave("adjusted main effects plots unweighted/FigMindPerception_entitytype.pdf",
+       FigMindPerception_et, width = 14, height = 6, dpi = 300)
+ 
+FigMoralAttitudes_mf <- (plots_mf[["AITC"]] | plots_mf[["SARC"]] | plots_mf[["PAAC"]]) +
+  plot_layout(guides = "collect", widths = c(.7, .7, .7)) +
+  plot_annotation() &
+  theme(
+    legend.position = "bottom",
+    plot.margin = margin(.1, .1, .1, .1, unit = "in")
+  )
+FigMoralAttitudes_mf
+ 
+FigMoralAttitudes_et <- (plots_et[["AITC"]] | plots_et[["SARC"]] | plots_et[["PAAC"]]) +
+  plot_layout(guides = "collect", widths = c(.7, .7, .7)) +
+  plot_annotation() &
+  theme(
+    legend.position = "bottom",
+    plot.margin = margin(.1, .1, .1, .1, unit = "in")
+  )
+FigMoralAttitudes_et
+ 
+ggsave("adjusted main effects plots unweighted/FigMoralAttitudes_mentalfaculty.png",
+       FigMoralAttitudes_mf, width = 14, height = 6, dpi = 300)
+ggsave("adjusted main effects plots unweighted/FigMoralAttitudes_mentalfaculty.pdf",
+       FigMoralAttitudes_mf, width = 14, height = 6, dpi = 300)
+ggsave("adjusted main effects plots unweighted/FigMoralAttitudes_entitytype.png",
+       FigMoralAttitudes_et, width = 14, height = 6, dpi = 300)
+ggsave("adjusted main effects plots unweighted/FigMoralAttitudes_entitytype.pdf",
+       FigMoralAttitudes_et, width = 14, height = 6, dpi = 300)
+ 
+FigSocialAttitudes_mf <- (plots_mf[["GAC"]] | plots_mf[["GLC"]] | plots_mf[["GIC"]]) /
+  (plots_mf[["CTC"]] | plots_mf[["ATC"]]) /
+  (plots_mf[["PTRC"]] | plots_mf[["PTSC"]]) +
+  plot_layout(guides = "collect", heights = c(.7, .7, .7), widths = c(.7, .7, .7)) +
+  plot_annotation() &
+  theme(
+    legend.position = "bottom",
+    plot.margin = margin(.1, .1, .1, .1, unit = "in")
+  )
+FigSocialAttitudes_mf
+ 
+FigSocialAttitudes_et <- (plots_et[["GAC"]] | plots_et[["GLC"]] | plots_et[["GIC"]]) /
+  (plots_et[["CTC"]] | plots_et[["ATC"]]) /
+  (plots_et[["PTRC"]] | plots_et[["PTSC"]]) +
+  plot_layout(guides = "collect", heights = c(.7, .7, .7), widths = c(.7, .7, .7)) +
+  plot_annotation() &
+  theme(
+    legend.position = "bottom",
+    plot.margin = margin(.1, .1, .1, .1, unit = "in")
+  )
+FigSocialAttitudes_et
+ 
+ggsave("adjusted main effects plots unweighted/FigSocialAttitudes_mentalfaculty.png",
+       FigSocialAttitudes_mf, width = 14, height = 16, dpi = 300)
+ggsave("adjusted main effects plots unweighted/FigSocialAttitudes_mentalfaculty.pdf",
+       FigSocialAttitudes_mf, width = 14, height = 16, dpi = 300)
+ggsave("adjusted main effects plots unweighted/FigSocialAttitudes_entitytype.png",
+       FigSocialAttitudes_et, width = 14, height = 16, dpi = 300)
+ggsave("adjusted main effects plots unweighted/FigSocialAttitudes_entitytype.pdf",
+       FigSocialAttitudes_et, width = 14, height = 16, dpi = 300)
+ 
+ 
+# Save workbook
+saveWorkbook(mfe_regression_workbook, "mental_faculty_entity_regressions_paper_unweighted.xlsx", overwrite = TRUE)
+ 
+
+
+```
+
+
+```{r ANOVAs}
+#-----------
+# 5x3 ANOVAs
+#-----------
+ 
+library(effectsize)
+ 
+set.seed(12345)
+ 
+# Set sum-to-zero contrasts to interpret Type 3 ANOVAs
+options(contrasts = c("contr.sum", "contr.poly"))
+ 
+# Ensure correct factor order for Type 3 ANOVAs
+supp$entitytype <- factor(supp$entitytype, levels = c("AI", "robot", "robotAI"))
+supp$mentalfaculty <- factor(supp$mentalfaculty, levels = (c("agent", "emotion", "reasoning",
+                                                             "sentience", "none")))
+ 
+# Define the list of dependent variables
+dependent_vars <- c(
+  "MPC",
+  "MPAC",
+  "AITC",
+  "SARC",
+  "PAAC",
+  "GAC",
+  "GIC",
+  "GLC",
+  "ATC",
+  "CTC",
+  "PTRC",
+  "PTSC")
+ 
+#-------------
+# Descriptives
+#-------------
+ 
+# Create an empty list to store descriptive stats
+descrip_entitytype_list <- list()
+descrip_mentalfaculty_list <- list()
+descrip_condition_list <- list()
+ 
+# Create descriptives workbook
+descriptives_workbook <- createWorkbook()
+options("openxlsx.numFmt" = "0.000")
+wrap_format <- createStyle(numFmt = "0.00", wrapText = TRUE)
+ 
+ 
+# Unweighted descriptives helper: mean/SE/SD, n, min, max computed directly
+# on the raw (unweighted) data.
+get_descriptives <- function(var, group, data) {
+  data %>%
+    filter(!is.na(.data[[var]])) %>%
+    group_by(across(all_of(group))) %>%
+    summarise(
+      n    = n(),
+      mean = mean(.data[[var]], na.rm = TRUE),
+      sd   = sd(.data[[var]], na.rm = TRUE),
+      min  = min(.data[[var]], na.rm = TRUE),
+      max  = max(.data[[var]], na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    mutate(se = sd / sqrt(n)) %>%
+    rename(Group = !!group) %>%
+    mutate(Group = as.character(Group),
+           Variable = var,
+           GroupType = group) %>%
+    dplyr::select(Variable, Group, GroupType, n, mean, se, sd, min, max)
+}
+ 
+# Loop through dependent variable for descriptives
+for (var in dependent_vars) {
+ 
+  descriptives_entitytype <- get_descriptives(var, "entitytype", supp)
+  descriptives_mentalfaculty <- get_descriptives(var, "mentalfaculty", supp)
+  descriptives_condition <- get_descriptives(var, "condition", supp)
+ 
+  # Store in respective lists
+  descrip_entitytype_list[[var]] <- descriptives_entitytype
+  descrip_mentalfaculty_list[[var]] <- descriptives_mentalfaculty
+  descrip_condition_list[[var]] <- descriptives_condition
+}
+ 
+# Combine each list into a single data frame
+df_entitytype <- do.call(rbind, descrip_entitytype_list)
+df_mentalfaculty <- do.call(rbind, descrip_mentalfaculty_list)
+df_condition <- do.call(rbind, descrip_condition_list)
+ 
+rownames(df_entitytype) <- NULL
+rownames(df_mentalfaculty) <- NULL
+rownames(df_condition) <- NULL
+ 
+# Export to Excel with multiple sheets
+# Add EntityType sheet
+addWorksheet(descriptives_workbook, "EntityType")
+writeData(descriptives_workbook, "EntityType", df_entitytype)
+addStyle(descriptives_workbook, "EntityType", wrap_format,
+         rows = 2:(nrow(df_entitytype) + 1),
+         cols = 1:ncol(df_entitytype), gridExpand = TRUE)
+setColWidths(descriptives_workbook, "EntityType",
+             cols = 1:ncol(df_entitytype), widths = "auto")
+ 
+# Add MentalFaculty sheet
+addWorksheet(descriptives_workbook, "MentalFaculty")
+writeData(descriptives_workbook, "MentalFaculty", df_mentalfaculty)
+addStyle(descriptives_workbook, "MentalFaculty", wrap_format,
+         rows = 2:(nrow(df_mentalfaculty) + 1),
+         cols = 1:ncol(df_mentalfaculty), gridExpand = TRUE)
+setColWidths(descriptives_workbook, "MentalFaculty",
+             cols = 1:ncol(df_mentalfaculty), widths = "auto")
+ 
+# Add Condition sheet
+addWorksheet(descriptives_workbook, "Condition")
+writeData(descriptives_workbook, "Condition", df_condition)
+addStyle(descriptives_workbook, "Condition", wrap_format,
+         rows = 2:(nrow(df_condition) + 1),
+         cols = 1:ncol(df_condition), gridExpand = TRUE)
+setColWidths(descriptives_workbook, "Condition",
+             cols = 1:ncol(df_condition), widths = "auto")
+ 
+# Save workbook
+saveWorkbook(descriptives_workbook, "descriptive_statistics_by_groups_paper_unweighted.xlsx",
+             overwrite = TRUE)
+ 
+#-------
+# ANOVAS
+#-------
+ 
+# Define the list of dependent variables with descriptive names
+dependent_vars <- list(
+  MPC = "Mind Perception",
+  MPAC = "Mind Authenticity",
+  AITC = "Moral Treatment",
+  SARC = "Support for AI Rights",
+  PAAC = "Pro-AI Activism",
+  GAC = "Godspeed Anthropomorphism",
+  GIC = "Godspeed Intelligence",
+  GLC = "Godspeed Likability",
+  ATC = "Affective Trust",
+  CTC = "Cognitive Trust",
+  PTRC = "Realistic Threat",
+  PTSC = "Symbolic Threat")
+ 
+ 
+# Panel titles and tags
+title_map <- c(
+  MPC  = "Mind Perception",
+  MPAC = "Mind Authenticity",
+  AITC = "Moral Treatment",
+  SARC = "Support for AI Rights",
+  PAAC = "Pro-AI Activism",
+  GAC  = "Godspeed Anthropomorphism",
+  GLC  = "Godspeed Likability",
+  GIC  = "Godspeed Intelligence",
+  CTC  = "Cognitive Trust",
+  ATC  = "Affective Trust",
+  PTRC = "Realistic Threat",
+  PTSC = "Symbolic Threat"
+)
+ 
+tag_map <- c(
+  MPC  = "A",
+  MPAC = "B",
+  AITC = "A",
+  SARC = "B",
+  PAAC = "C",
+  GAC  = "A",
+  GLC  = "B",
+  GIC  = "C",
+  CTC  = "D",
+  ATC  = "E",
+  PTRC = "F",
+  PTSC = "G"
+)
+ 
+# Per-variable scale specs (min, max, and axis breaks)
+scale_specs <- list(
+  MPC  = list(min = 0, max = 100, breaks = seq(0, 100, by = 25)),
+  MPAC = list(min = 0, max = 100, breaks = seq(0, 100, by = 25)),
+  AITC = list(min = 1, max = 7,   breaks = seq(1, 7, by = 1)),
+  SARC = list(min = 1, max = 7,   breaks = seq(1, 7, by = 1)),
+  PAAC = list(min = 1, max = 7,   breaks = seq(1, 7, by = 1)),
+  GAC  = list(min = 0, max = 10,  breaks = seq(0, 10, by = 2.5)),
+  GLC  = list(min = 0, max = 10,  breaks = seq(0, 10, by = 2.5)),
+  GIC  = list(min = 0, max = 10,  breaks = seq(0, 10, by = 2.5)),
+  CTC  = list(min = 1, max = 7,   breaks = seq(1, 7, by = 1)),
+  ATC  = list(min = 1, max = 7,   breaks = seq(1, 7, by = 1)),
+  PTRC = list(min = 0, max = 100, breaks = seq(0, 100, by = 25)),
+  PTSC = list(min = 0, max = 100, breaks = seq(0, 100, by = 25))
+)
+ 
+# Reusable paper theme layer
+paper_theme <- function(title, tag, y_min, y_max, y_breaks, show_legend = FALSE) {
+  headroom <- 0.05 * (y_max - y_min)
+  list(
+    coord_cartesian(ylim = c(y_min, y_max + headroom)),
+    scale_y_continuous(breaks = y_breaks),
+    scale_x_discrete(expand = expansion(mult = 0.15)),
+    theme_classic(base_family = "serif"),
+    theme(
+      legend.position = if (show_legend) "bottom" else "none",
+      plot.title = element_text(hjust = 0, vjust = 1, margin = margin(b = 3), size = 18, family = "serif", face = "plain"),
+      plot.title.position = "plot",
+      plot.tag = element_text(hjust = 0, vjust = 0, margin = margin(b = 5), size = 18, family = "serif", face = "plain"),
+      plot.margin = margin(t = 5, b = 5),
+      axis.title.x = element_blank(),
+      axis.title.y = element_blank(),
+      axis.text = element_text(family = "serif", face = "plain", size = 14),
+      axis.text.x = element_text(angle = 0, hjust = 0.5, vjust = 1),
+      legend.text = element_text(family = "serif", face = "plain", size = 14),
+      legend.title = element_blank()
+    ),
+    labs(title = title, tag = tag)
+  )
+}
+ 
+# Relabel helpers
+recode_entitytype <- function(x) {
+  case_when(
+    as.character(x) == "AI" ~ "AIs",
+    as.character(x) == "robot" ~ "Robots",
+    as.character(x) == "robotAI" ~ "Robots/AIs",
+    TRUE ~ as.character(x)
+  )
+}
+ 
+recode_mentalfaculty <- function(x) {
+  out <- case_when(
+    x == "none" ~ "Control",
+    x == "agent" ~ "Agency",
+    x == "emotion" ~ "Emotion",
+    x == "reasoning" ~ "Reasoning",
+    x == "sentience" ~ "Sentience",
+    TRUE ~ as.character(x)
+  )
+  factor(out, levels = c("Sentience", "Emotion", "Reasoning", "Agency", "Control"))
+}
+ 
+# Create workbook
+expsection_anovas_workbook <- createWorkbook()
+options("openxlsx.numFmt" = "0.000")
+wrap_format <- createStyle(numFmt = "0.00", wrapText = TRUE)
+ 
+# Create an empty list to store results
+results_list_expaov <- list()
+plots_list_expaov <- list()
+ 
+# Create directory for plots if it doesn't exist
+if (!dir.exists("experimental anova plots unweighted")) {
+  dir.create("experimental anova plots unweighted")
+}
+ 
+# Loop through each dependent variable
+for (var_name in names(dependent_vars)) {
+ 
+  sheet_name <- dependent_vars[[var_name]]
+  spec_dv <- scale_specs[[var_name]]
+ 
+  # Create formula dynamically — experimental factors + demographic covariates
+  # agecen and intcen are continuous; gender and raceethnicity are multicategorical (sum contrasts)
+  formula_expaov <- as.formula(paste(
+    var_name,
+    "~ entitytype + mentalfaculty + entitytype:mentalfaculty",
+    "+ agecen + gender + raceethnicity + intcen"
+  ))
+ 
+  # Run unweighted linear model
+  model_expaov <- lm(formula_expaov, data = supp, na.action = na.omit)
+ 
+  # Type 3 ANOVA
+  expaov_result <- car::Anova(model_expaov, type = 3)
+ 
+  # Tidy results
+  tidy_expaov <- tidy(expaov_result)
+ 
+  # Add FDR-corrected p-values
+  tidy_expaov$p.fdr <- p.adjust(tidy_expaov$p.value, method = "fdr")
+  tidy_expaov$sig <- get_sig_stars(tidy_expaov$p.value)
+  tidy_expaov$sig.fdr <- get_sig_stars(tidy_expaov$p.fdr)
+ 
+  # effectsize::eta_squared() computes partial eta-squared with a noncentral-F
+  # based confidence interval directly from the car::Anova() object.
+  eta_sq_expaov <- effectsize::eta_squared(expaov_result, partial = TRUE, ci = 0.95) %>%
+    as.data.frame() %>%
+    dplyr::rename(term = Parameter,
+                  partial_eta_sq = Eta2_partial,
+                  eta_sq_ci_low = CI_low,
+                  eta_sq_ci_high = CI_high) %>%
+    dplyr::select(term, partial_eta_sq, eta_sq_ci_low, eta_sq_ci_high)
+ 
+  # Residual df (denominator df), same across all terms, used for APA F string
+  residual_df_expaov <- tidy_expaov$df[tidy_expaov$term == "Residuals"]
+ 
+  tidy_expaov <- tidy_expaov %>%
+    left_join(eta_sq_expaov, by = "term") %>%
+    mutate(
+      apa_effect_size = ifelse(
+        !is.na(partial_eta_sq),
+        sprintf("\u03b7\u00b2p = %.3f, 95%% CI [%.3f, %.3f]",
+                partial_eta_sq, eta_sq_ci_low, eta_sq_ci_high),
+        NA_character_
+      ),
+      apa_full = ifelse(
+        !is.na(partial_eta_sq),
+        sprintf("F(%d, %d) = %.2f, p %s, \u03b7\u00b2p = %.3f, 95%% CI [%.3f, %.3f]",
+                df, residual_df_expaov, statistic,
+                ifelse(p.value < .001, "< .001", paste0("= ", sprintf("%.3f", p.value))),
+                partial_eta_sq, eta_sq_ci_low, eta_sq_ci_high),
+        NA_character_
+      )
+    )
+  # ============================================================================
+ 
+  print(tidy_expaov)
+ 
+ 
+  # Pairwise comparisons
+  emm_entity_expaov <- emmeans(model_expaov, pairwise ~ entitytype, adjust = "none")
+  emm_mentalfaculty_expaov <- emmeans(model_expaov, pairwise ~ mentalfaculty, adjust = "none")
+  emm_entity_by_mf_expaov <- emmeans(model_expaov, ~ entitytype | mentalfaculty)
+  pairwise_results_expaov <- pairs(emm_entity_by_mf_expaov, adjust = "none")
+ 
+  # All pairwise comparisons across both factors
+  emm_interaction_expaov <- emmeans(model_expaov, ~ entitytype:mentalfaculty)
+  pairwise_results_expaov2 <- pairs(emm_interaction_expaov, adjust = "none")
+ 
+  # infer = c(TRUE, TRUE) returns both the CI (lower.CL/upper.CL) and the
+  # test statistic/p-value in a single summary data frame 
+  entity_contrasts_df <- as.data.frame(summary(emm_entity_expaov$contrasts, infer = c(TRUE, TRUE)))
+  mentalfaculty_contrasts_df <- as.data.frame(summary(emm_mentalfaculty_expaov$contrasts, infer = c(TRUE, TRUE)))
+  entity_by_mf_contrasts_df <- as.data.frame(summary(pairwise_results_expaov, infer = c(TRUE, TRUE)))
+  interaction_contrasts_df <- as.data.frame(summary(pairwise_results_expaov2, infer = c(TRUE, TRUE)))
+ 
+  apa_mdiff <- function(df) {
+    df %>% mutate(apa_contrast = sprintf("Mdiff = %.2f, 95%% CI [%.2f, %.2f], p %s",
+                                          estimate, lower.CL, upper.CL,
+                                          ifelse(p.value < .001, "< .001",
+                                                 paste0("= ", sprintf("%.3f", p.value)))))
+  }
+  entity_contrasts_df <- apa_mdiff(entity_contrasts_df)
+  mentalfaculty_contrasts_df <- apa_mdiff(mentalfaculty_contrasts_df)
+  entity_by_mf_contrasts_df <- apa_mdiff(entity_by_mf_contrasts_df)
+  interaction_contrasts_df <- apa_mdiff(interaction_contrasts_df)
+  # ===============================================================================
+ 
+  # Store results
+  results_list_expaov[[var_name]] <- list(
+    model_expaov = model_expaov,
+    anova_expaov = tidy_expaov,
+    eta_sq_expaov = eta_sq_expaov,                            # NEW
+    emm_entity_expaov = emm_entity_expaov,
+    emm_mentalfaculty_expaov = emm_mentalfaculty_expaov,
+    emm_entity_by_mf_expaov = emm_entity_by_mf_expaov,
+    pairwise_results_expaov = pairwise_results_expaov,
+    entity_contrasts_df = entity_contrasts_df,                # NEW
+    mentalfaculty_contrasts_df = mentalfaculty_contrasts_df,  # NEW
+    entity_by_mf_contrasts_df = entity_by_mf_contrasts_df,     # NEW
+    interaction_contrasts_df = interaction_contrasts_df        # NEW
+  )
+ 
+  # ==================== WRITE APA SUMMARY TO WORKBOOK ====================
+  addWorksheet(expsection_anovas_workbook, sheet_name)
+  current_row <- 1
+ 
+  writeData(expsection_anovas_workbook, sheet_name,
+            "ANOVA Results (with partial eta-squared and 95% CI)", startRow = current_row)
+  current_row <- current_row + 1
+  writeData(expsection_anovas_workbook, sheet_name, tidy_expaov, startRow = current_row)
+  current_row <- current_row + nrow(tidy_expaov) + 3
+ 
+  writeData(expsection_anovas_workbook, sheet_name,
+            "Pairwise Contrasts: Entity Type (with 95% CI)", startRow = current_row)
+  current_row <- current_row + 1
+  writeData(expsection_anovas_workbook, sheet_name, entity_contrasts_df, startRow = current_row)
+  current_row <- current_row + nrow(entity_contrasts_df) + 3
+ 
+  writeData(expsection_anovas_workbook, sheet_name,
+            "Pairwise Contrasts: Mental Faculty (with 95% CI)", startRow = current_row)
+  current_row <- current_row + 1
+  writeData(expsection_anovas_workbook, sheet_name, mentalfaculty_contrasts_df, startRow = current_row)
+  current_row <- current_row + nrow(mentalfaculty_contrasts_df) + 3
+ 
+  writeData(expsection_anovas_workbook, sheet_name,
+            "Pairwise Contrasts: Entity Type within Mental Faculty (with 95% CI)", startRow = current_row)
+  current_row <- current_row + 1
+  writeData(expsection_anovas_workbook, sheet_name, entity_by_mf_contrasts_df, startRow = current_row)
+  current_row <- current_row + nrow(entity_by_mf_contrasts_df) + 3
+ 
+  writeData(expsection_anovas_workbook, sheet_name,
+            "Pairwise Contrasts: Entity Type x Mental Faculty, all cells (with 95% CI)", startRow = current_row)
+  current_row <- current_row + 1
+  writeData(expsection_anovas_workbook, sheet_name, interaction_contrasts_df, startRow = current_row)
+
+  # ==================== CREATE PLOTS ====================
+ 
+  # Main Effect of Entity Type
+ 
+  raw_data_entity <- supp %>%
+    filter(!is.na(!!sym(var_name)) & !is.na(entitytype)) %>%
+    mutate(entitytype_label = recode_entitytype(entitytype))
+ 
+  emm_entity_df <- as.data.frame(emm_entity_expaov$emmeans) %>%
+    rename(fitted = emmean, se = SE) %>%
+    mutate(
+      lower = fitted - se,
+      upper = fitted + se,
+      entitytype_label = recode_entitytype(entitytype)
+    )
+ 
+  pairs_entity_df <- as.data.frame(emm_entity_expaov$contrasts)
+  sig_entity <- pairs_entity_df %>% filter(p.value < 0.05)
+ 
+  p1 <- ggplot() +
+    geom_violin(data = raw_data_entity,
+                aes(x = entitytype_label, y = !!sym(var_name)),
+                fill = "#1A1A2E", alpha = 0.3, color = "#1A1A2E") +
+    geom_point(data = emm_entity_df,
+               aes(x = entitytype_label, y = fitted),
+               size = 4, color = "#1A1A2E") +
+    geom_errorbar(data = emm_entity_df,
+                  aes(x = entitytype_label, ymin = lower, ymax = upper),
+                  width = 0.2, linewidth = 1, color = "#1A1A2E") +
+    labs(x = "Entity Type")
+ 
+  # Add significance bars if there are significant comparisons
+  if (nrow(sig_entity) > 0) {
+    y_range <- range(raw_data_entity[[var_name]], na.rm = TRUE)
+    y_max <- max(emm_entity_df$upper, na.rm = TRUE)
+    y_step <- (y_range[2] - y_max) / (nrow(sig_entity) + 2)
+ 
+    for (i in 1:nrow(sig_entity)) {
+      contrast_parts <- strsplit(as.character(sig_entity$contrast[i]), " - ")[[1]]
+      group1 <- trimws(gsub("^\\(|\\)$", "", contrast_parts[1]))
+      group2 <- trimws(gsub("^\\(|\\)$", "", contrast_parts[2]))
+ 
+      group1_label <- emm_entity_df$entitytype_label[as.character(emm_entity_df$entitytype) == group1][1]
+      group2_label <- emm_entity_df$entitytype_label[as.character(emm_entity_df$entitytype) == group2][1]
+ 
+      if (!is.na(group1_label) && !is.na(group2_label)) {
+        x1 <- which(levels(factor(emm_entity_df$entitytype_label)) == group1_label)
+        x2 <- which(levels(factor(emm_entity_df$entitytype_label)) == group2_label)
+        y_pos <- y_max + (i * y_step)
+ 
+        p1 <- p1 +
+          annotate("segment", x = x1, xend = x2, y = y_pos, yend = y_pos, linewidth = 0.5) +
+          annotate("segment", x = x1, xend = x1, y = y_pos, yend = y_pos - y_step/4, linewidth = 0.5) +
+          annotate("segment", x = x2, xend = x2, y = y_pos, yend = y_pos - y_step/4, linewidth = 0.5) +
+          annotate("text", x = (x1 + x2)/2, y = y_pos + y_step/4,
+                   label = ifelse(sig_entity$p.value[i] < .001, "***",
+                                  ifelse(sig_entity$p.value[i] < .01, "**", "*")),
+                   size = 5)
+      }
+    }
+  }
+ 
+  p1 <- p1 + paper_theme(title_map[[var_name]], tag_map[[var_name]],
+                          spec_dv$min, spec_dv$max, spec_dv$breaks)
+ 
+  ggsave(filename = paste0("experimental anova plots unweighted/", var_name, "_entitytype_paper.png"),
+         plot = p1, width = 8, height = 6, dpi = 300)
+ 
+  # Main Effect of Mental Faculty
+ 
+  raw_data_mf <- supp %>%
+    filter(!is.na(!!sym(var_name)) & !is.na(mentalfaculty)) %>%
+    mutate(mentalfaculty_label = recode_mentalfaculty(mentalfaculty))
+ 
+  emm_mf_df <- as.data.frame(emm_mentalfaculty_expaov$emmeans) %>%
+    rename(fitted = emmean, se = SE) %>%
+    mutate(
+      lower = fitted - se,
+      upper = fitted + se,
+      mentalfaculty_label = recode_mentalfaculty(mentalfaculty)
+    )
+ 
+  pairs_mf_df <- as.data.frame(emm_mentalfaculty_expaov$contrasts)
+  sig_mf <- pairs_mf_df %>% filter(p.value < 0.05)
+ 
+  p2 <- ggplot() +
+    geom_violin(data = raw_data_mf,
+                aes(x = mentalfaculty_label, y = !!sym(var_name)),
+                fill = "#FFD700", alpha = 0.3, color = "#FFD700") +
+    geom_point(data = emm_mf_df,
+               aes(x = mentalfaculty_label, y = fitted),
+               size = 4, color = "#FFD700") +
+    geom_errorbar(data = emm_mf_df,
+                  aes(x = mentalfaculty_label, ymin = lower, ymax = upper),
+                  width = 0.2, linewidth = 1, color = "#FFD700") +
+    labs(x = "Mental Faculty")
+ 
+  if (nrow(sig_mf) > 0) {
+    y_range <- range(raw_data_mf[[var_name]], na.rm = TRUE)
+    y_max <- max(emm_mf_df$upper, na.rm = TRUE)
+    y_step <- (y_range[2] - y_max) / (nrow(sig_mf) + 2)
+ 
+    for (i in 1:nrow(sig_mf)) {
+      contrast_parts <- strsplit(as.character(sig_mf$contrast[i]), " - ")[[1]]
+      group1 <- trimws(gsub("^\\(|\\)$", "", contrast_parts[1]))
+      group2 <- trimws(gsub("^\\(|\\)$", "", contrast_parts[2]))
+ 
+      group1_label <- emm_mf_df$mentalfaculty_label[as.character(emm_mf_df$mentalfaculty) == group1][1]
+      group2_label <- emm_mf_df$mentalfaculty_label[as.character(emm_mf_df$mentalfaculty) == group2][1]
+ 
+      if (!is.na(group1_label) && !is.na(group2_label)) {
+        x1 <- which(levels(factor(emm_mf_df$mentalfaculty_label)) == group1_label)
+        x2 <- which(levels(factor(emm_mf_df$mentalfaculty_label)) == group2_label)
+        y_pos <- y_max + (i * y_step)
+ 
+        p2 <- p2 +
+          annotate("segment", x = x1, xend = x2, y = y_pos, yend = y_pos, linewidth = 0.5) +
+          annotate("segment", x = x1, xend = x1, y = y_pos, yend = y_pos - y_step/4, linewidth = 0.5) +
+          annotate("segment", x = x2, xend = x2, y = y_pos, yend = y_pos - y_step/4, linewidth = 0.5) +
+          annotate("text", x = (x1 + x2)/2, y = y_pos + y_step/4,
+                   label = ifelse(sig_mf$p.value[i] < .001, "***",
+                                  ifelse(sig_mf$p.value[i] < .01, "**", "*")),
+                   size = 5)
+      }
+    }
+  }
+ 
+  p2 <- p2 + paper_theme(title_map[[var_name]], tag_map[[var_name]],
+                          spec_dv$min, spec_dv$max, spec_dv$breaks)
+ 
+  ggsave(filename = paste0("experimental anova plots unweighted/", var_name, "_mentalfaculty_paper.png"),
+         plot = p2, width = 8, height = 6, dpi = 300)
+ 
+  # Interaction Effect
+ 
+  raw_data_int <- supp %>%
+    filter(!is.na(!!sym(var_name)) & !is.na(mentalfaculty) & !is.na(entitytype)) %>%
+    mutate(
+      mentalfaculty_label = recode_mentalfaculty(mentalfaculty),
+      entitytype_label = recode_entitytype(entitytype)
+    )
+ 
+  emm_interaction_df <- as.data.frame(emm_entity_by_mf_expaov) %>%
+    rename(fitted = emmean, se = SE) %>%
+    mutate(
+      lower = fitted - se,
+      upper = fitted + se,
+      mentalfaculty_label = recode_mentalfaculty(mentalfaculty),
+      entitytype_label = recode_entitytype(entitytype)
+    )
+ 
+  pairs_interaction_df <- as.data.frame(pairwise_results_expaov)
+  sig_interaction <- pairs_interaction_df %>% filter(p.value < 0.05)
+ 
+  n_entities <- length(levels(raw_data_int$entitytype))
+  gold_navy_ramp <- colorRampPalette(c("#FFD700", "#1A1A2E"))(n_entities)
+ 
+  p3 <- ggplot() +
+    geom_violin(data = raw_data_int,
+                aes(x = mentalfaculty_label, y = !!sym(var_name), fill = entitytype_label),
+                position = position_dodge(width = 0.8), alpha = 0.5, color = NA, width = 0.7) +
+    geom_point(data = emm_interaction_df,
+               aes(x = mentalfaculty_label, y = fitted, group = entitytype_label),
+               position = position_dodge(width = 0.8), size = 3) +
+    geom_errorbar(data = emm_interaction_df,
+                  aes(x = mentalfaculty_label, ymin = lower, ymax = upper, group = entitytype_label),
+                  position = position_dodge(width = 0.8), width = 0.25, linewidth = 0.5) +
+    scale_fill_manual(values = gold_navy_ramp) +
+    labs(x = "Mental Faculty", fill = "Entity Type")
+ 
+  if (nrow(sig_interaction) > 0) {
+    y_range <- range(raw_data_int[[var_name]], na.rm = TRUE)
+    y_max <- max(emm_interaction_df$upper, na.rm = TRUE)
+    y_step <- (y_range[2] - y_max) / (nrow(sig_interaction) + 2)
+ 
+    entity_levels <- levels(emm_interaction_df$entitytype)
+    mf_levels <- levels(factor(emm_interaction_df$mentalfaculty_label))
+    dodge_width <- 0.8
+ 
+    for (i in 1:nrow(sig_interaction)) {
+      mf_level <- recode_mentalfaculty(sig_interaction$mentalfaculty[i])
+      mf_idx <- which(mf_levels == mf_level)
+ 
+      contrast_parts <- strsplit(as.character(sig_interaction$contrast[i]), " - ")[[1]]
+      entity1 <- trimws(contrast_parts[1])
+      entity2 <- trimws(contrast_parts[2])
+ 
+      entity1_idx <- which(entity_levels == entity1)
+      entity2_idx <- which(entity_levels == entity2)
+ 
+      offset1 <- (entity1_idx - (n_entities + 1)/2) * (dodge_width / n_entities)
+      offset2 <- (entity2_idx - (n_entities + 1)/2) * (dodge_width / n_entities)
+ 
+      x1 <- mf_idx + offset1
+      x2 <- mf_idx + offset2
+      y_pos <- y_max + (i * y_step)
+ 
+      p3 <- p3 +
+        annotate("segment", x = x1, xend = x2, y = y_pos, yend = y_pos, linewidth = 0.5) +
+        annotate("segment", x = x1, xend = x1, y = y_pos, yend = y_pos - y_step/4, linewidth = 0.5) +
+        annotate("segment", x = x2, xend = x2, y = y_pos, yend = y_pos - y_step/4, linewidth = 0.5) +
+        annotate("text", x = (x1 + x2)/2, y = y_pos + y_step/4,
+                 label = ifelse(sig_interaction$p.value[i] < .001, "***",
+                                ifelse(sig_interaction$p.value[i] < .01, "**", "*")),
+                 size = 4)
+    }
+  }
+ 
+  p3 <- p3 + paper_theme(title_map[[var_name]], tag_map[[var_name]],
+                          spec_dv$min, spec_dv$max, spec_dv$breaks, show_legend = TRUE)
+ 
+  ggsave(filename = paste0("experimental anova plots unweighted/", var_name, "_interaction_paper.png"),
+         plot = p3, width = 8, height = 6, dpi = 300)
+ 
+  # Store plots
+  plots_list_expaov[[var_name]] <- list(
+    main_entity = p1,
+    main_mentalfaculty = p2,
+    interaction = p3
+  )
+ 
+  # Print plots
+  print(p1)
+  print(p2)
+  print(p3)
+}
+ 
+# Save the APA summary workbook (ANOVA table w/ partial eta-sq + CI,
+# plus all pairwise contrast tables w/ CI, one sheet per DV)
+saveWorkbook(expsection_anovas_workbook, "experimental_anovas_apa_results_unweighted.xlsx",
+             overwrite = TRUE)
+ 
+# Combine figures with patchwork
+# Split the per-DV plot list into three sets: entity-type main effect,
+# mental-faculty main effect, and the interaction plots.
+plots_entity <- lapply(plots_list_expaov, `[[`, "main_entity")
+plots_mf     <- lapply(plots_list_expaov, `[[`, "main_mentalfaculty")
+plots_interaction <- lapply(plots_list_expaov, `[[`, "interaction")
+ 
+# Helper: combine plots into rows (character vectors of variable names),
+# stack the rows, apply the shared FigS3-style layout/theme, and save
+# both a PNG and a PDF.
+combine_and_save <- function(plot_list, rows_layout, filename_prefix, width, height) {
+  row_plots <- lapply(rows_layout, function(row_vars) {
+    Reduce(`|`, lapply(row_vars, function(v) plot_list[[v]]))
+  })
+  combined <- Reduce(`/`, row_plots)
+ 
+  n_rows <- length(rows_layout)
+  n_cols_max <- max(sapply(rows_layout, length))
+ 
+  combined <- combined +
+    plot_layout(guides = "collect", heights = rep(.7, n_rows), widths = rep(.7, n_cols_max)) +
+    plot_annotation() &
+    theme(
+      legend.position = "bottom",
+      plot.margin = margin(.1, .1, .1, .1, unit = "in")
+    )
+ 
+  ggsave(paste0(filename_prefix, ".png"), combined, width = width, height = height, dpi = 300)
+  ggsave(paste0(filename_prefix, ".pdf"), combined, width = width, height = height, dpi = 300)
+ 
+  combined
+}
+ 
+FigMindPerception_entity <- combine_and_save(
+  plots_entity, list(c("MPC", "MPAC")),
+  "experimental anova plots unweighted/FigMindPerception_entitytype", width = 14, height = 6)
+FigMindPerception_mf <- combine_and_save(
+  plots_mf, list(c("MPC", "MPAC")),
+  "experimental anova plots unweighted/FigMindPerception_mentalfaculty", width = 14, height = 6)
+FigMindPerception_interaction <- combine_and_save(
+  plots_interaction, list(c("MPC", "MPAC")),
+  "experimental anova plots unweighted/FigMindPerception_interaction", width = 14, height = 6)
+ 
+FigMoralAttitudes_entity <- combine_and_save(
+  plots_entity, list(c("AITC", "SARC", "PAAC")),
+  "experimental anova plots unweighted/FigMoralAttitudes_entitytype", width = 14, height = 6)
+FigMoralAttitudes_mf <- combine_and_save(
+  plots_mf, list(c("AITC", "SARC", "PAAC")),
+  "experimental anova plots unweighted/FigMoralAttitudes_mentalfaculty", width = 14, height = 6)
+FigMoralAttitudes_interaction <- combine_and_save(
+  plots_interaction, list(c("AITC", "SARC", "PAAC")),
+  "experimental anova plots unweighted/FigMoralAttitudes_interaction", width = 14, height = 6)
+ 
+social_rows <- list(c("GAC", "GLC", "GIC"), c("CTC", "ATC"), c("PTRC", "PTSC"))
+ 
+FigSocialAttitudes_entity <- combine_and_save(
+  plots_entity, social_rows,
+  "experimental anova plots unweighted/FigSocialAttitudes_entitytype", width = 14, height = 16)
+FigSocialAttitudes_mf <- combine_and_save(
+  plots_mf, social_rows,
+  "experimental anova plots unweighted/FigSocialAttitudes_mentalfaculty", width = 14, height = 16)
+FigSocialAttitudes_interaction <- combine_and_save(
+  plots_interaction, social_rows,
+  "experimental anova plots unweighted/FigSocialAttitudes_interaction", width = 14, height = 16)
+ 
+```
+ 
+```{r exploratory 2 body, no body x 2 mind, no mind}
+ 
+# Exploratory 2 (body, no body) x 2 (mind, no mind) contrasts
+# entity (1 = AI, -1 = robot, 0 = robot/AI)
+# mental faculty (-1 = none, .25 = agency, .25 = emotion, .25 = reasoning, .25 = sentience)
+ 
+# Create workbook
+test_anovas_workbook <- createWorkbook()
+options("openxlsx.numFmt" = "0.000")
+wrap_format <- createStyle(numFmt = "0.00", wrapText = TRUE)
+ 
+# Create an empty list to store results
+results_list_testaov <- list()
+plots_list_testaov <- list()
+ 
+set.seed(12345)
+ 
+# Set sum-to-zero contrasts to interpret Type 3 ANOVAs
+options(contrasts = c("contr.sum", "contr.poly"))
+ 
+# Ensure correct factor order for Type 3 ANOVAs
+supp$entitytype <- factor(supp$entitytype, levels = c("AI", "robot", "robotAI"))
+supp$mentalfaculty <- factor(supp$mentalfaculty, levels = (c("agent", "emotion", "reasoning",
+                                                             "sentience", "none")))
+ 
+# Loop through each dependent variable
+for (var_name in names(dependent_vars)) {
+ 
+  sheet_name <- dependent_vars[[var_name]]
+ 
+  # Create formula dynamically — experimental factors + demographic covariates
+  formula_testaov <- as.formula(paste(
+    var_name,
+    "~ entitytype + mentalfaculty + entitytype:mentalfaculty",
+    "+ agecen + gender + raceethnicity + intcen"
+  ))
+ 
+  # Run unweighted linear model
+  model_testaov <- lm(formula_testaov, data = supp, na.action = na.omit)
+ 
+  # Type 3 ANOVA
+  testaov_result <- car::Anova(model_testaov, type = 3)
+ 
+  # Tidy results
+  tidy_testaov <- tidy(testaov_result)
+ 
+  # ==================== PARTIAL ETA-SQUARED + 95% CI ====================
+  eta_sq_testaov <- effectsize::eta_squared(testaov_result, partial = TRUE, ci = 0.95) %>%
+    as.data.frame() %>%
+    dplyr::rename(term = Parameter,
+                  partial_eta_sq = Eta2_partial,
+                  eta_sq_ci_low = CI_low,
+                  eta_sq_ci_high = CI_high) %>%
+    dplyr::select(term, partial_eta_sq, eta_sq_ci_low, eta_sq_ci_high)
+ 
+  residual_df_testaov <- tidy_testaov$df[tidy_testaov$term == "Residuals"]
+ 
+  tidy_testaov <- tidy_testaov %>%
+    left_join(eta_sq_testaov, by = "term") %>%
+    mutate(
+      apa_effect_size = ifelse(
+        !is.na(partial_eta_sq),
+        sprintf("\u03b7\u00b2p = %.3f, 95%% CI [%.3f, %.3f]",
+                partial_eta_sq, eta_sq_ci_low, eta_sq_ci_high),
+        NA_character_
+      ),
+      apa_full = ifelse(
+        !is.na(partial_eta_sq),
+        sprintf("F(%d, %d) = %.2f, p %s, \u03b7\u00b2p = %.3f, 95%% CI [%.3f, %.3f]",
+                df, residual_df_testaov, statistic,
+                ifelse(p.value < .001, "< .001", paste0("= ", sprintf("%.3f", p.value))),
+                partial_eta_sq, eta_sq_ci_low, eta_sq_ci_high),
+        NA_character_
+      )
+    )
+  # ============================================================================
+ 
+  print(tidy_testaov)
+ 
+  # Mind x body contrasts — covariates held at mean/reference via emmeans
+  emm_testaov <- emmeans(model_testaov, ~ entitytype + mentalfaculty + entitytype:mentalfaculty)
+ 
+  contrasts_interaction <- contrast(emm_testaov, interaction = list(
+      entitytype    = list(AI_vs_robot = c(0, 1, -1)),
+      mentalfaculty = list(none_vs_faculty = c(-1, .25, .25, .25, .25))
+  ))
+ 
+  emm_entity <- emmeans(model_testaov, ~ entitytype)
+  contrasts_entity <- contrast(emm_entity, list(
+      AI_vs_robot = c(0, 1, -1)
+  ))
+ 
+  emm_faculty <- emmeans(model_testaov, ~ mentalfaculty)
+  contrasts_mentalfaculty <- contrast(emm_faculty, list(
+      none_vs_faculty = c(-1, .25, .25, .25, .25)
+  ))
+ 
+  # ==================== 95% CIs FOR CUSTOM CONTRASTS ====================
+  # infer = c(TRUE, TRUE) -> CI (lower.CL/upper.CL) + test stat + p-value together
+  contrasts_interaction_df <- as.data.frame(summary(contrasts_interaction, infer = c(TRUE, TRUE)))
+  contrasts_entity_df <- as.data.frame(summary(contrasts_entity, infer = c(TRUE, TRUE)))
+  contrasts_mentalfaculty_df <- as.data.frame(summary(contrasts_mentalfaculty, infer = c(TRUE, TRUE)))
+ 
+  apa_mdiff2 <- function(df) {
+    df %>% mutate(apa_contrast = sprintf("Mdiff = %.2f, 95%% CI [%.2f, %.2f], p %s",
+                                          estimate, lower.CL, upper.CL,
+                                          ifelse(p.value < .001, "< .001",
+                                                 paste0("= ", sprintf("%.3f", p.value)))))
+  }
+  contrasts_interaction_df <- apa_mdiff2(contrasts_interaction_df)
+  contrasts_entity_df <- apa_mdiff2(contrasts_entity_df)
+  contrasts_mentalfaculty_df <- apa_mdiff2(contrasts_mentalfaculty_df)
+  # ==============================================================================
+ 
+  # Store results
+  results_list_testaov[[var_name]] <- list(
+    model_testaov = model_testaov,
+    anova_testaov = tidy_testaov,
+    eta_sq_testaov = eta_sq_testaov,                          # NEW
+    emm_testaov = emm_testaov,
+    contrasts_interaction = contrasts_interaction,
+    contrasts_entity = contrasts_entity,
+    contrasts_mentalfaculty = contrasts_mentalfaculty,
+    contrasts_interaction_df = contrasts_interaction_df,       # NEW
+    contrasts_entity_df = contrasts_entity_df,                 # NEW
+    contrasts_mentalfaculty_df = contrasts_mentalfaculty_df    # NEW
+  )
+ 
+  # Add worksheet (one per DV)
+  addWorksheet(test_anovas_workbook, sheet_name)
+ 
+  current_row <- 1
+ 
+  # Write ANOVA results (now includes partial eta-sq + CI columns)
+  writeData(test_anovas_workbook, sheet_name, "ANOVA Results (with partial eta-squared and 95% CI)", startRow = current_row)
+  current_row <- current_row + 1
+  aov_df_testaov <- tidy_testaov
+  aov_df_testaov <- cbind(Variable = rownames(aov_df_testaov), aov_df_testaov)
+  rownames(aov_df_testaov) <- NULL
+  writeData(test_anovas_workbook, sheet_name, aov_df_testaov, startRow = current_row)
+  current_row <- current_row + nrow(aov_df_testaov) + 3
+ 
+  # Write model summary
+  writeData(test_anovas_workbook, sheet_name, "Model Summary", startRow = current_row)
+  current_row <- current_row + 1
+  model_summary_testaov <- summary(model_testaov)
+  model_coef_df_testaov <- as.data.frame(model_summary_testaov$coefficients)
+  model_coef_df_testaov <- cbind(Variable = rownames(model_coef_df_testaov), model_coef_df_testaov)
+  rownames(model_coef_df_testaov) <- NULL
+ 
+  # Relabel coefficient terms
+  model_coef_df_testaov <- model_coef_df_testaov %>%
+    mutate(Variable = case_when(
+      # Experimental main effects
+      Variable == "mentalfaculty1" ~ "mentalfaculty: agency",
+      Variable == "mentalfaculty2" ~ "mentalfaculty: emotion",
+      Variable == "mentalfaculty3" ~ "mentalfaculty: reasoning",
+      Variable == "mentalfaculty4" ~ "mentalfaculty: sentience",
+      Variable == "entitytype1"    ~ "entitytype: AI",
+      Variable == "entitytype2"    ~ "entitytype: robot",
+      # Interactions
+      Variable == "entitytype1:mentalfaculty1" ~ "entitytype: AI × mentalfaculty: agency",
+      Variable == "entitytype2:mentalfaculty1" ~ "entitytype: robot × mentalfaculty: agency",
+      Variable == "entitytype1:mentalfaculty2" ~ "entitytype: AI × mentalfaculty: emotion",
+      Variable == "entitytype2:mentalfaculty2" ~ "entitytype: robot × mentalfaculty: emotion",
+      Variable == "entitytype1:mentalfaculty3" ~ "entitytype: AI × mentalfaculty: reasoning",
+      Variable == "entitytype2:mentalfaculty3" ~ "entitytype: robot × mentalfaculty: reasoning",
+      Variable == "entitytype1:mentalfaculty4" ~ "entitytype: AI × mentalfaculty: sentience",
+      Variable == "entitytype2:mentalfaculty4" ~ "entitytype: robot × mentalfaculty: sentience",
+      # Continuous covariates
+      Variable == "agecen" ~ "covariate: age (centered)",
+      Variable == "intcen" ~ "covariate: internet use (centered)",
+      # Multicategorical covariates (sum-contrast coefficients)
+      grepl("^gender", Variable) ~ gsub("^gender", "covariate: gender ", Variable),
+      grepl("^raceethnicity", Variable) ~ gsub("^raceethnicity", "covariate: race/ethnicity ", Variable),
+      TRUE ~ Variable
+    ))
+ 
+  writeData(test_anovas_workbook, sheet_name, model_coef_df_testaov, startRow = current_row)
+  current_row <- current_row + nrow(model_coef_df_testaov) + 3
+ 
+  # Write interaction contrast (now includes 95% CI + apa_contrast columns)
+  writeData(test_anovas_workbook, sheet_name, "Interaction Contrast (AI vs Robot x Some Faculty vs None), with 95% CI", startRow = current_row)
+  current_row <- current_row + 1
+  writeData(test_anovas_workbook, sheet_name, contrasts_interaction_df, startRow = current_row)
+  current_row <- current_row + nrow(contrasts_interaction_df) + 3
+ 
+  # Write entity main effect contrast (now includes 95% CI + apa_contrast columns)
+  writeData(test_anovas_workbook, sheet_name, "Entity Contrast (AI vs Robot), with 95% CI", startRow = current_row)
+  current_row <- current_row + 1
+  writeData(test_anovas_workbook, sheet_name, contrasts_entity_df, startRow = current_row)
+  current_row <- current_row + nrow(contrasts_entity_df) + 3
+ 
+  # Write faculty main effect contrast (now includes 95% CI + apa_contrast columns)
+  writeData(test_anovas_workbook, sheet_name, "Faculty Contrast (None vs Some Faculty), with 95% CI", startRow = current_row)
+  current_row <- current_row + 1
+  writeData(test_anovas_workbook, sheet_name, contrasts_mentalfaculty_df, startRow = current_row)
+  current_row <- current_row + nrow(contrasts_mentalfaculty_df) + 3
+ 
+}
+ 
+# Save the workbook
+saveWorkbook(test_anovas_workbook, "mind_body_anovas_results_unweighted.xlsx", overwrite = TRUE)
+```
+
+
+```

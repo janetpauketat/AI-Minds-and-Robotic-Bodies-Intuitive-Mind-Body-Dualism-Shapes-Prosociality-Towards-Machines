@@ -1,0 +1,2336 @@
+---
+title: "Experiment2_MBI_2026"
+author: 
+date: "2026-08-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+prop_table <- function(var){
+  tab1 <- as_tibble(table(var))
+  tab2 <- as_tibble(100*round(prop.table(table(var)), 3))
+  # Combine tab1 and tab2, suppressing new name messages
+  tab <- suppressMessages(bind_cols(tab1, tab2[2]))
+  colnames(tab) <- c("Category", "N", "Perc")
+  return(tab)
+}
+
+export_objects <- function(wb, sheet_title, object_list){
+  addWorksheet(wb, sheet_title)
+  
+  curr_row <- 1
+  for(i in seq_along(object_list)) {
+    writeData(wb, sheet_title,
+              names(object_list)[i], startCol = 1, startRow = curr_row)
+    writeData(wb, sheet_title,
+              object_list[[i]], startCol = 1, startRow = curr_row+1)
+    curr_row <- curr_row + nrow(object_list[[i]]) + 3
+  }
+}
+
+get_sig_stars <- function(p) {
+  ifelse(p < 0.001, "***",
+         ifelse(p < 0.01, "**",
+                ifelse(p < 0.05, "*","")
+                )
+         )
+}
+
+add_composite <- function(data, new_col, cols, FUN = mean) {
+  data %>%
+    select(Pcode, all_of(cols)) %>%
+    rowwise() %>%
+    mutate(!!new_col := FUN(c_across(all_of(cols)))) %>%
+    select(Pcode, all_of(new_col)) %>%
+    { full_join(data, ., by = "Pcode") }
+}
+
+# Helper function for omega analysis
+run_omega <- function(data, cols) {
+  om_data <- data[, cols]
+  alpha_result <- data %>% dplyr::select(all_of(cols)) %>% alpha
+  print(alpha_result)
+  omega_result <- omega(om_data, nfactors=1, fm="minres", n.iter=30, p=.05, poly=FALSE,
+        key=NULL, flip=TRUE, digits=2, title="Omega", sl=TRUE, labels=NULL,
+        plot=TRUE, n.obs=NA, rotate="oblimin")
+  list(alpha = alpha_result, omega = omega_result)
+}
+
+# Helper to safely pull raw alpha and total omega out of a run_omega() result
+extract_reliability_values <- function(result) {
+  alpha_val <- tryCatch(result$alpha$total$raw_alpha, error = function(e) NA_real_)
+  omega_val <- tryCatch({
+    if (!is.null(result$omega$omega.tot)) {
+      result$omega$omega.tot
+    } else if (!is.null(result$omega$omega_h)) {
+      result$omega$omega_h
+    } else {
+      NA_real_
+    }
+  }, error = function(e) NA_real_)
+  list(alpha = alpha_val, omega = omega_val)
+}
+
+```
+
+
+```{r cleaning}
+
+# Load packages and functions
+library(readxl)
+library(openxlsx)
+library(tidyverse) 
+
+# Load data
+mbidata <- read_excel("mind-body_2026_chi_raw.xlsx")
+
+# Remove duplicate columns
+mbi <- select(mbidata, c("Minutes Spent",
+                         "consent", "prolific_id", "Experiment (mind)", "Randomize (lg4kgtl)",
+                         "attention1", "attention2", "mindcomprehension",   
+                         "companycheck", "AIcheck", "robotnumbercheck", 
+                         
+                         "featurecheckbasicbody", "uncannybasicbody", 
+                         "comboeasebasicbody", "likecombobasicbody", 
+                         "MP1basicbody", "MP2basicbody", "MP3basicbody", 
+                         "MP4basicbody", "agency1basicbody", "agency2basicbody",
+                         "MCE1basicbody", "MCE2basicbody", "MCE3basicbody", 
+                         "MCE4basicbody", "MCE5basicbody", "MCE6basicbody",
+                         "vote_negbasicbody", "property_negbasicbody", 
+                         "money_negbasicbody", "contracts_negbasicbody",
+                         "job_negbasicbody", "legal_negbasicbody", 
+                         "legal_posbasicbody", "copyright_posbasicbody",
+                         "remuneration_posbasicbody", "consent_posbasicbody", 
+                         "shutdown_posbasicbody", "cruelty_posbasicbody",
+                         "posrec1basicbody", "posrec2basicbody", "posrec3basicbody", 
+                         "negrec1basicbody", "negrec2basicbody", "negrec3basicbody",
+                         "personbasicbody", "soulbasicbody", 
+                         "essencebasicbody", "moralworthbasicbody",
+                         
+                         "featurecheckagentbody", "uncannyagentbody", 
+                         "comboeaseagentbody", "likecomboagentbody", 
+                         "MP1agentbody", "MP2agentbody", 
+                         "MP3agentbody", "MP4agentbody", "agency1agentbody", "agency2agentbody",
+                         "MCE1agentbody", "MCE2agentbody", "MCE3agentbody", 
+                         "MCE4agentbody", "MCE5agentbody", "MCE6agentbody",
+                         "vote_negagentbody", "property_negagentbody", 
+                         "money_negagentbody", "contracts_negagentbody",
+                         "job_negagentbody", "legal_negagentbody", 
+                         "legal_posagentbody", "copyright_posagentbody",
+                         "remuneration_posagentbody", "consent_posagentbody", 
+                         "shutdown_posagentbody", "cruelty_posagentbody",
+                         "posrec1agentbody", "posrec2agentbody", "posrec3agentbody", 
+                         "negrec1agentbody", "negrec2agentbody", "negrec3agentbody",
+                         "personagentbody", "soulagentbody", 
+                         "essenceagentbody", "moralworthagentbody",
+                         
+                         "featurecheckemotivebody", "uncannyemotivebody", 
+                         "comboeaseemotivebody", "likecomboemotivebody", 
+                         "MP1emotivebody", "MP2emotivebody", "MP3emotivebody", 
+                         "MP4emotivebody", "agency1emotivebody", "agency2emotivebody",
+                         "MCE1emotivebody", "MCE2emotivebody", "MCE3emotivebody", 
+                         "MCE4emotivebody", "MCE5emotivebody", "MCE6emotivebody",
+                         "vote_negemotivebody", "property_negemotivebody", 
+                         "money_negemotivebody", "contracts_negemotivebody",
+                         "job_negemotivebody", "legal_negemotivebody", 
+                         "legal_posemotivebody", "copyright_posemotivebody",
+                         "remuneration_posemotivebody", "consent_posemotivebody",
+                         "shutdown_posemotivebody", "cruelty_posemotivebody",
+                         "posrec1emotivebody", "posrec2emotivebody", "posrec3emotivebody", 
+                         "negrec1emotivebody", "negrec2emotivebody", "negrec3emotivebody",
+                         "personemotivebody", "soulemotivebody", 
+                         "essenceemotivebody", "moralworthemotivebody",
+                         
+                         "featurecheckbiobody", "uncannybiobody", 
+                         "comboeasebiobody", "likecombobiobody", 
+                         "MP1biobody", "MP2biobody", "MP3biobody", 
+                         "MP4biobody", "agency1biobody", "agency2biobody",
+                         "MCE1biobody", "MCE2biobody", "MCE3biobody", 
+                         "MCE4biobody", "MCE5biobody", "MCE6biobody",
+                         "vote_negbiobody", "property_negbiobody", 
+                         "money_negbiobody", "contracts_negbiobody",
+                         "job_negbiobody", "legal_negbiobody", 
+                         "legal_posbiobody", "copyright_posbiobody",
+                         "remuneration_posbiobody", "consent_posbiobody", 
+                         "shutdown_posbiobody", "cruelty_posbiobody",
+                         "posrec1biobody", "posrec2biobody", "posrec3biobody", 
+                         "negrec1biobody", "negrec2biobody", "negrec3biobody",
+                         "personbiobody", "soulbiobody", 
+                         "essencebiobody", "moralworthbiobody",
+                         
+                         "featurecheckanthrobody", "uncannyanthrobody", 
+                         "comboeaseanthrobody", "likecomboanthrobody", 
+                         "MP1anthrobody", "MP2anthrobody", "MP3anthrobody", 
+                         "MP4anthrobody", "agency1anthrobody", "agency2anthrobody",
+                         "MCE1anthrobody", "MCE2anthrobody", "MCE3anthrobody", 
+                         "MCE4anthrobody", "MCE5anthrobody", "MCE6anthrobody",
+                         "vote_neganthrobody", "property_neganthrobody", 
+                         "money_neganthrobody", "contracts_neganthrobody",
+                         "job_neganthrobody", "legal_neganthrobody", 
+                         "legal_posanthrobody", "copyright_posanthrobody",
+                         "remuneration_posanthrobody", "consent_posanthrobody", 
+                         "shutdown_posanthrobody", "cruelty_posanthrobody",
+                         "posrec1anthrobody", "posrec2anthrobody", "posrec3anthrobody", 
+                         "negrec1anthrobody", "negrec2anthrobody", "negrec3anthrobody",
+                         "personanthrobody", "soulanthrobody", 
+                         "essenceanthrobody", "moralworthanthrobody",
+                         
+                         "BEM1", "BEM2", "BEM3", "BEM4", "BEM5", "BHM1", "BHM2",
+                         "BHM3", "BHM4", "BNHM1", "BNHM2",
+                         
+                         "own", "work", "smart", "companion", "fint", "fexp", 
+                         "age", "gender", "eth", "income", "ed", "politics", "religion", "diet"))
+
+# Check for duplicate prolific_ids
+duplicate_ids <- mbi %>%
+  count(prolific_id) %>%
+  filter(n >1)
+duplicate_ids
+
+# Wrong response for attention check 1
+fac1 <- filter(mbi, attention1 != "agree")
+nrow(fac1)
+
+# Missing responses for attention check 1
+fac.m1 <- filter(mbi, is.na(attention1))
+nrow(fac.m1)
+
+# Wrong response for attention check 2
+fac2 <- filter(mbi, attention2 != "somewhat agree")
+nrow(fac2)
+
+# Missing responses for attention check 2S
+fac.m2 <- filter(mbi, is.na(attention2))
+nrow(fac.m2)
+
+# Did any P fail both attention checks?
+bothattentionfailed <- filter(mbi, attention1 != "agree" & attention2 != "somewhat agree")
+bothattentionfailed %>% select(prolific_id) %>% print(n = Inf)
+
+# Drop attention check failed
+nrow(mbi)
+mbi <- filter(mbi, attention1 == "agree" & attention2 == "somewhat agree")
+nrow(mbi)
+
+# Count rows without any personal demographics
+nodems <- filter(mbi, is.na(age))
+nrow(nodems)
+# Count rows without full AI demographics
+noAIdems <- filter(mbi, is.na(fexp))
+nrow(noAIdems)
+
+# Recode demographic and categorical variables from character to factor
+mbi <- mbi %>%
+  mutate(
+    across(c(own, work, smart), ~ factor(.x, levels = c("No", "Yes"))),
+    companion = factor(companion, levels = c("No", "Yes", "Not sure")),
+    gender    = factor(gender, levels = c("Woman", "Man", "Nonbinary", "Prefer not to say")),
+    ed        = recode_factor(ed,
+      "None or not applicable" = "None", 
+      "High School Diploma or GED" = "High", 
+      "Associate's Degree" = "Associate",
+      "Bachelor's Degree" = "Bachelor", 
+      "Master's Degree" = "Master",
+      "Doctoral Degree (for example law, medicine, philosophy, arts, or science" = "PhD",
+      "Prefer not to say" = "Undisclosed"),
+
+    eth = recode_factor(eth,
+      "American Indian, Native American or Alaskan Native" = "Indigenous",
+      "Asian, Asian-American or Pacific Islander" = "Asian",
+      "Black or African-American" = "Black",
+      "Dual or Multiple Ethnicities" = "Multiracial",
+      "Hispanic or Latine-American" = "Hispanic",
+      "White or European-American (non-Hispanic)" = "White",
+      "Other" = "Other",
+      "Prefer not to say" = "Undisclosed"),
+
+    income = factor(income, levels = c("$0-20,999",
+                              "$21,000-40,999",
+                              "$41,000-60,999",
+                              "$61,000-80,999",
+                              "$81,000-99,999",
+                              "$100,000-149,999",
+                              "$150,000-199,999",
+                              "$200,000-249,999",
+                              "$250,000+",
+                              "Prefer not to say")),
+                    
+    diet = recode_factor(diet,
+      "Meat-eater (no restrictions on animal products)" = "Meat-eater",
+      "Pescatarian (no chicken, beef, or any meats other than fish)" = "Pescatarian",
+      "Vegetarian (no meat)" = "Vegetarian",
+      "Vegan (no animal products)" = "Vegan",
+      "Other restrictions on animal products" = "Other restrictions"),
+
+    religion = recode_factor(religion,
+      "Buddhist" = "Buddhist",
+      "Christian-Catholic (for example Roman Catholic and Orthodox)" = "Catholic",
+      "Christian-Protestant (for example Episcopalian, Presbyterian, United Church of Christ, Methodist, Baptist, Lutheran)" = "Protestant",
+      "Hindu" = "Hindu", "Jain" = "Jain", "Jewish" = "Jewish", "Muslim" = "Muslim",
+      "Shinto" = "Shinto", "Sikh" = "Sikh",
+      "Atheist (do not believe in God)" = "Atheist",
+      "Agnostic (not sure if there is a God)" = "Agnostic",
+      "No religion" = "None",
+      "Something else (if you answered 'something else' for religion, please specify)." = "Other",
+      "Prefer not to say" = "Undisclosed",
+      .ordered = FALSE)
+  )
+
+# Recode demographic scale items from character to number
+scaledemos <- c("fint", "fexp")
+
+mbi <- mbi %>%
+  mutate(across(all_of(scaledemos), ~dplyr::recode(., "(1) Only on rare occasions" = 1, 
+                                                   "(2) A few times a year" = 2,
+                                                   "(3) Monthly" = 3,
+                                                   "(4) Weekly" = 4,
+                                                   "(5) Daily" = 5,
+                                                   "(0) Never or Not applicable" = 0))) %>%
+  mutate(across(all_of(scaledemos), ~as.numeric(.)))
+
+# Reverse code BEM2 and BEM4
+mbi$BEM2R = 100 - mbi$BEM2
+mbi$BEM4R = 100 - mbi$BEM4
+
+# Rename and factorize the mind IV and rename the body order
+mbi <- mbi %>% 
+  rename(bodyorder = "Randomize (lg4kgtl)") %>%
+  rename(mind = "Experiment (mind)") %>%
+  mutate(mind = relevel(factor(str_extract(mind, "basicmind|agenticmind|emotivemind|agenticemotivemind|emotiveagenticmind"), 
+                             levels = c("basicmind", "agenticmind", "emotivemind", 
+                                        "agenticemotivemind", "emotiveagenticmind")), ref = "basicmind"))
+
+# Time check
+mean(mbi$`Minutes Spent`)
+median(mbi$'Minutes Spent')
+
+# Add a participant labeling variable
+mbi$Pcode <- seq.int(nrow(mbi))
+
+#-------------------
+## Save cleaned data
+#-------------------
+
+write.xlsx(mbi, "mbi_clean.xlsx")
+save(mbi, file = "mbi_clean.Rdata")
+
+```
+
+```{r checks}
+
+# Mind system assignment numbers
+
+# Total assigned in raw data:
+# Basicmind = 270
+# Agenticmind = 270
+# Emotivemind = 271
+# Agenticemotivemind = 269
+# Emotiveagenticmind = 269
+
+mindN <- mbi %>% 
+  group_by(mind) %>% 
+  summarise(no_rows = length(mind))
+print(mindN)
+
+# Comprehension check numbers
+# --- Generic comprehension/feature-check summary function ---
+check_summary <- function(data, value_var, group_var = NULL) {
+  if (is.null(group_var)) {
+    data %>%
+      count(.data[[value_var]], name = "n") %>%
+      mutate(percent = n / sum(n) * 100)
+  } else {
+    data %>%
+      count(.data[[group_var]], .data[[value_var]], name = "n") %>%
+      group_by(.data[[group_var]]) %>%
+      mutate(percent = n / sum(n) * 100) %>%
+      ungroup()
+  }
+}
+
+# --- Variables with no grouping (simple feature checks) ---
+feature_vars <- c(
+  featurecheckbasicbody     = "featurecheckbasicbody",
+  featurecheckagentbody     = "featurecheckagentbody",
+  featurecheckemotivebody   = "featurecheckemotivebody",
+  featurecheckbiobody       = "featurecheckbiobody",
+  featurecheckanthrobody    = "featurecheckanthrobody",
+  companycheck              = "companycheck",   # Enki, Anthropic, Hitachi, Talos, Yanta, Luban
+  robotnumbercheck          = "robotnumbercheck" # 0-6
+)
+
+feature_tables <- feature_vars %>%
+  map(\(var) check_summary(mbi, value_var = var))
+
+walk(feature_tables, print)
+
+# --- Variables grouped by "mind" ---
+grouped_vars <- c(
+  mindcomprehension = "mindcomprehension",
+  AIcheck            = "AIcheck"   # True / False
+)
+
+grouped_tables <- grouped_vars %>%
+  map(\(var) check_summary(mbi, value_var = var, group_var = "mind"))
+
+walk(grouped_tables, print)
+
+
+# --- Generic comprehension/feature-check summary function ---
+check_summary <- function(data, value_var, group_var = NULL) {
+  if (is.null(group_var)) {
+    data %>%
+      count(.data[[value_var]], name = "n") %>%
+      mutate(percent = n / sum(n) * 100)
+  } else {
+    data %>%
+      count(.data[[group_var]], .data[[value_var]], name = "n") %>%
+      group_by(.data[[group_var]]) %>%
+      mutate(percent = n / sum(n) * 100) %>%
+      ungroup()
+  }
+}
+
+# --- Variables with no grouping (simple feature checks) ---
+feature_vars <- c(
+  featurecheckbasicbody     = "featurecheckbasicbody",
+  featurecheckagentbody     = "featurecheckagentbody",
+  featurecheckemotivebody   = "featurecheckemotivebody",
+  featurecheckbiobody       = "featurecheckbiobody",
+  featurecheckanthrobody    = "featurecheckanthrobody",
+  companycheck              = "companycheck",   # Enki, Anthropic, Hitachi, Talos, Yanta, Luban
+  robotnumbercheck          = "robotnumbercheck" # 0-6
+)
+
+feature_tables <- feature_vars %>%
+  map(\(var) check_summary(mbi, value_var = var))
+
+walk(feature_tables, print)
+
+# --- Variables grouped by "mind" ---
+grouped_vars <- c(
+  mindcomprehension = "mindcomprehension",
+  AIcheck            = "AIcheck"   # True / False
+)
+
+grouped_tables <- grouped_vars %>%
+  map(\(var) check_summary(mbi, value_var = var, group_var = "mind"))
+
+walk(grouped_tables, print)
+
+# --- Bar plots: frequency (n) by option, ungrouped tables ---
+feature_plots <- imap(feature_tables, \(tbl, var) {
+  ggplot(tbl, aes(x = .data[[var]], y = n)) +
+    geom_col() +
+    ggtitle(paste("Frequency of Responses:", var)) +
+    xlab(var) +
+    ylab("Frequency") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+})
+
+walk(feature_plots, print)
+
+# Access individually, e.g.:
+feature_plots[["companycheck"]]
+feature_plots[["robotnumbercheck"]]
+
+# --- Bar plots: frequency (n) by option, grouped by "mind" ---
+grouped_plots <- imap(grouped_tables, \(tbl, var) {
+  ggplot(tbl, aes(x = .data[[var]], y = n, fill = mind)) +
+    geom_col(position = "dodge") +
+    ggtitle(paste("Frequency of Responses:", var, "by Mind Condition")) +
+    xlab(var) +
+    ylab("Frequency") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+})
+
+walk(grouped_plots, print)
+
+
+# --- Checking evaluations of the mind-body combo ---
+bodyevalvariables <- c("uncannybasicbody", "comboeasebasicbody", "likecombobasicbody", 
+               "uncannyagentbody", "comboeaseagentbody", "likecomboagentbody",
+               "uncannyemotivebody", "comboeaseemotivebody", "likecomboemotivebody",
+               "uncannybiobody", "comboeasebiobody", "likecombobiobody",
+               "uncannyanthrobody", "comboeaseanthrobody", "likecomboanthrobody")
+
+bodyvar_labels <- c(
+  uncannybasicbody     = "Uncanniness of the Mind and Basic Body Combo",
+  comboeasebasicbody   = "Clarity of the Mind and Basic Body Combo",
+  likecombobasicbody   = "Liking of the Mind and Basic Body Combo",
+  uncannyagentbody     = "Uncanniness of the Mind and Agent Body Combo",
+  comboeaseagentbody   = "Clarity of the Mind and Agent Body Combo",
+  likecomboagentbody   = "Liking of the Mind and Agent Body Combo",
+  uncannyemotivebody   = "Uncanniness of the Mind and Emotive Body Combo",
+  comboeaseemotivebody = "Clarity of the Mind and Emotive Body Combo",
+  likecomboemotivebody = "Liking of the Mind and Emotive Body Combo",
+  uncannybiobody       = "Uncanniness of the Mind and Bio Body Combo",
+  comboeasebiobody     = "Clarity of the Mind and Bio Body Combo",
+  likecombobiobody     = "Liking of the Mind and Bio Body Combo",
+  uncannyanthrobody    = "Uncanniness of the Mind and Anthro Body Combo",
+  comboeaseanthrobody  = "Clarity of the Mind and Anthro Body Combo",
+  likecomboanthrobody  = "Liking of the Mind and Anthro Body Combo"
+)
+bodyevalchecks <- mbi %>% select(all_of(bodyevalvariables)) %>%
+  psych::describe()
+
+bodyevalplots <- bodyevalvariables %>%
+  set_names() %>%
+  imap(\(var, name) {
+    ggplot(mbi, aes(x = .data[[var]])) +
+      geom_histogram(binwidth = 1) +
+      ggtitle(bodyvar_labels[[name]]) + 
+      xlab(bodyvar_labels[[name]]) +
+      ylab("Frequency") +
+      scale_y_continuous(breaks = seq(from = 0, to = 1200, by = 5))
+  })
+
+walk(bodyevalplots, print)
+
+
+# --- Check number of bodies correctly identified ---
+mbi <- mbi %>%
+  mutate(
+    basicbody_correct   = as.integer(featurecheckbasicbody   == "antennas"),
+    agentbody_correct   = as.integer(featurecheckagentbody   == "torque (force) sensors"),
+    emotivebody_correct = as.integer(featurecheckemotivebody == "nociceptor (pain) sensors"),
+    biobody_correct     = as.integer(featurecheckbiobody     == "gripping tips"),
+    anthrobody_correct  = as.integer(featurecheckanthrobody  == "dexterous hands"),
+    bodies_correct = basicbody_correct + agentbody_correct + emotivebody_correct +
+                     biobody_correct + anthrobody_correct
+  )
+
+table(mbi$bodies_correct)
+
+# --- Summarize percentages for correctly identified 0–5 bodies ---
+body_id_counts <- mbi %>%
+  count(bodies_correct) %>%
+  mutate(percent = round(100 * n / sum(n), 2))
+body_id_counts
+
+# --- Exclude body check failures from analyses ---
+nrow(mbi)
+mbi <- mbi %>% filter(bodies_correct >= 2)
+nrow(mbi)
+
+# --- Recompute Mind N ---
+mindN <- mbi %>% 
+  group_by(mind) %>% 
+  summarise(no_rows = length(mind))
+print(mindN)
+
+```
+
+```{r demographics}
+
+library(psych)
+
+# Age mean, distribution
+psych::describe(mbi$age)
+ggplot(mbi, aes(x = age)) +
+  geom_histogram(binwidth = 1) +
+  ggtitle("Age") + 
+  xlab("Age") +
+  ylab("Frequency") +
+  scale_x_continuous(breaks = seq(from = 18, to = 100, by = 8)) +
+  scale_y_continuous(breaks = seq(from = 0, to = 1200, by = 5))
+
+young <- subset(mbi, age >= 18 & age <= 34)
+middle <- subset(mbi, age >= 35 & age <= 54)
+old <- subset(mbi, age >= 55 & age <= 100)
+
+youngper <- ((nrow(young)/nrow(mbi))*100)
+youngper
+
+middleper <- ((nrow(middle)/nrow(mbi))*100)
+middleper
+
+oldper <- ((nrow(old)/nrow(mbi))*100)
+oldper
+
+# Gender percentages, distributions
+ggplot(mbi, aes(x = gender)) + 
+  geom_bar() + 
+  ggtitle("Gender") + 
+  xlab("Gender") +
+  ylab("Frequency") +
+  scale_x_discrete() +
+  scale_y_continuous(breaks = seq(from = 0, to = 1200, by = 60)) 
+
+gender_props <- prop_table(mbi$gender)
+gender_props
+
+# Race/ethnicity percentages, distributions
+ggplot(mbi, aes(x = eth)) + 
+  geom_bar() + 
+  ggtitle("Race/Ethnicity") + 
+  xlab("Race/Ethnicity") +
+  ylab("Frequency") +
+  scale_x_discrete() +
+  scale_y_continuous(breaks = seq(from = 0, to = 1200, by = 60)) 
+
+raceethnicity_props <- prop_table(mbi$eth)
+raceethnicity_props
+
+# Education mean, distribution 
+ggplot(mbi, aes(x = ed)) + 
+  geom_bar() + 
+  ggtitle("Education") + 
+  xlab("Education") +
+  ylab("Frequency") +
+  scale_x_discrete() +
+  scale_y_continuous(breaks = seq(from = 0, to = 1200, by = 60)) 
+
+ed_props <- prop_table(mbi$ed)
+ed_props
+
+# Income mean, distribution
+mbi %>%
+  mutate(income = fct_relevel(income, 
+                              "$0-20,999",
+                              "$21,000-40,999",
+                              "$41,000-60,999",
+                              "$61,000-80,999",
+                              "$81,000-99,999",
+                              "$100,000-149,999",
+                              "$150,000-199,999",
+                              "$200,000-249,999",
+                              "$250,000+",
+                              "Prefer not to say")) %>% 
+  ggplot(aes(x = income)) + 
+  geom_bar() + 
+  ggtitle("Income affiliation") + 
+  xlab("Income") +
+  ylab("Frequency") +
+  scale_x_discrete() +
+  scale_y_continuous(breaks = seq(from = 0, to = 100, by = 60))
+
+income_props <- prop_table(mbi$income)
+income_props
+
+# Political orientation mean, distribution
+psych::describe(mbi$politics)
+ggplot(mbi, aes(x = politics)) +
+  geom_histogram(binwidth = 0.1) +
+  ggtitle("Political orientation") + 
+  xlab("Liberal to Conservative") +
+  ylab("Frequency") +
+  scale_x_continuous(breaks = c(1:5)) +
+  scale_y_continuous(breaks = seq(from = 0, to = 1200, by = 10))
+
+# Religion percentages, distributions
+mbi %>%
+  mutate(religion = fct_relevel(religion, "Atheist",
+                                "Agnostic",
+                                "None",
+                                "Catholic",
+                                "Protestant",
+                                "Jewish",
+                                "Muslim",
+                                "Buddhist",
+                                "Hindu",
+                                "Shinto",
+                                "Other",
+                                "Undisclosed")) %>% 
+  filter(!is.na(religion)) %>%
+  ggplot(aes(x = religion)) + 
+  geom_bar() + 
+  ggtitle("Religious affiliation") + 
+  xlab("Religion") +
+  ylab("Frequency") +
+  scale_x_discrete(labels = c("Atheist", "Agnostic", "None", "Catholic",
+                              "Protestant",  "Jewish", "Muslim", "Buddhist", 
+                              "Hindu", "Shinto", "Other", "Undisclosed")) +
+  scale_y_continuous(breaks = seq(from = 0, to = 400, by = 20))
+
+religion_props <- prop_table(mbi$religion)
+religion_props
+
+# Diet percentages, distribution
+mbi %>%
+  mutate(diet = fct_relevel(diet, "Meat-eater", 
+                            "Pescatarian", 
+                            "Vegetarian", 
+                            "Vegan", 
+                            "Other restrictions")) %>% 
+  filter(!is.na(diet)) %>%
+  ggplot(aes(x = diet)) + 
+  geom_bar() + 
+  ggtitle("Diet") + 
+  xlab("Diet") +
+  ylab("Frequency") +
+  scale_x_discrete(labels = c("Meat-eater", "Pescatarian", "Vegetarian", 
+                              "Vegan", "Other restrictions")) +
+  scale_y_continuous(breaks = seq(from = 0, to = 1100, by = 50))
+
+diet_props <- prop_table(mbi$diet)
+diet_props
+
+# AI ownership percentages, distribution
+mbi %>%
+  mutate(own = fct_relevel(own, "No", "Yes")) %>% 
+  ggplot(aes(x = own)) + 
+  geom_bar() + 
+  ggtitle("Robot/AI ownership") + 
+  xlab("Ownership") +
+  ylab("Frequency") +
+  scale_x_discrete(labels = c("Don't own", "Own")) +
+  scale_y_continuous(breaks = seq(from = 0, to = 1000, by = 50))
+
+own_props <- prop_table(mbi$own)
+own_props
+
+# AI colleague percentages, distribution
+mbi %>%
+  mutate(work = fct_relevel(work, "No", "Yes")) %>% 
+  ggplot(aes(x = work)) + 
+  geom_bar() + 
+  ggtitle("Work with robots/AIs") + 
+  xlab("Work with robots/AIs") +
+  ylab("Frequency") +
+  scale_x_discrete(labels = c("No", "Yes")) +
+  scale_y_continuous(breaks = seq(from = 0, to = 1000, by = 50))
+
+work_props <- prop_table(mbi$work)
+work_props
+
+# Smart device ownership, distributions
+mbi %>%
+  mutate(smart = fct_relevel(smart, "No", "Yes")) %>% 
+  ggplot(aes(x = smart)) + 
+  geom_bar() + 
+  ggtitle("Smart device ownership") + 
+  xlab("Smart device ownership") +
+  ylab("Frequency") +
+  scale_x_discrete(labels = c("No", "Yes")) +
+  scale_y_continuous(breaks = seq(from = 0, to = 1000, by = 50))
+
+smart_props <- prop_table(mbi$smart)
+smart_props
+
+# Frequency of interaction mean, distribution
+psych::describe(mbi$fint)
+ggplot(mbi, aes(x = fint)) +
+  geom_histogram(binwidth = 0.1) +
+  ggtitle("Interaction frequency") + 
+  xlab("Never to Daily") +
+  ylab("Frequency") +
+  scale_x_continuous(breaks = c(0:5)) +
+  scale_y_continuous(breaks = seq(from = 0, to = 1000, by = 50))
+
+# Frequency of narrative exposure mean, distribution
+psych::describe(mbi$fexp)
+ggplot(mbi, aes(x = fexp)) +
+  geom_histogram(binwidth = 0.1) +
+  ggtitle("Exposure frequency") + 
+  xlab("Never to Daily") +
+  ylab("Frequency") +
+  scale_x_continuous(breaks = c(0:5)) +
+  scale_y_continuous(breaks = seq(from = 0, to = 1000, by = 50))
+
+# Companion use
+mbi %>%
+  mutate(companion = fct_relevel(companion, "No", "Yes", "Not sure")) %>% 
+  ggplot(aes(x = companion)) + 
+  geom_bar() + 
+  ggtitle("Companion use") + 
+  ylab("Frequency") +
+  scale_y_continuous(breaks = seq(from = 0, to = 1000, by = 50))
+
+companion_props <- prop_table(mbi$companion)
+companion_props
+
+
+```
+
+```{r reliability and composites}
+
+#----------------------
+## Reliability Analyses 
+#----------------------
+
+# Correlations
+corr.test(mbi$fint, mbi$fexp, method = "pearson")
+
+suffixes <- c("basicbody", "agentbody", "emotivebody", "biobody", "anthrobody")
+
+# base item stems (without suffix) for each construct
+construct_items <- list(
+  "Mind Perception"    = c("MP1", "MP2", "MP3", "MP4", "agency1", "agency2"),
+  "Moral Treatment"     = c("MCE1", "MCE2", "MCE3", "MCE4", "MCE5", "MCE6"),
+  "Support for Rights"  = c("vote_neg", "property_neg", "money_neg", "contracts_neg",
+                             "job_neg", "legal_neg", "legal_pos", "copyright_pos",
+                             "remuneration_pos", "consent_pos", "shutdown_pos", "cruelty_pos"),
+  "Positive Rights"     = c("legal_pos", "copyright_pos", "remuneration_pos",
+                             "consent_pos", "shutdown_pos", "cruelty_pos"),
+  "Negative Rights"     = c("vote_neg", "property_neg", "money_neg",
+                             "contracts_neg", "job_neg", "legal_neg"),
+  "Reciprocity"         = c("posrec1", "posrec2", "posrec3",
+                             "negrec1", "negrec2", "negrec3"),
+  "Worth"               = c("person", "soul", "essence", "moralworth")
+)
+
+# composite name codes
+construct_codes <- c(
+  "Mind Perception"    = "MPC",
+  "Moral Treatment"     = "AITC",
+  "Support for Rights"  = "SRC",
+  "Positive Rights"     = "patiencyRC",
+  "Negative Rights"     = "agencyRC",
+  "Reciprocity"         = "RC",
+  "Worth"               = "WC"
+)
+
+omega_results <- list()
+
+# Container for reliability values, nested by construct (mind condition) -> suffix (body feature)
+reliability_table <- list()
+
+for (suf in suffixes) {
+  for (construct in names(construct_items)) {
+    vars <- paste0(construct_items[[construct]], suf)
+    key  <- paste0(construct, " - ", suf)
+
+    # --- alpha + omega reliability ---
+    cat("#", key, "\n")
+    omega_results[[key]] <- run_omega(mbi, vars)
+
+    # --- record both reliability estimates for export ---
+    rel_vals <- extract_reliability_values(omega_results[[key]])
+
+    if (is.null(reliability_table[[construct]])) {
+      reliability_table[[construct]] <- data.frame(
+        BodyFeature = character(),
+        Alpha       = numeric(),
+        Omega       = numeric(),
+        stringsAsFactors = FALSE
+      )
+    }
+    reliability_table[[construct]] <- rbind(
+      reliability_table[[construct]],
+      data.frame(
+        BodyFeature = suf,
+        Alpha       = rel_vals$alpha,
+        Omega       = rel_vals$omega,
+        stringsAsFactors = FALSE
+      )
+    )
+
+    # --- composite score, named to match run_omega variable set ---
+    comp_name <- paste0(construct_codes[[construct]], "_", suf)
+    mbi <- add_composite(mbi, comp_name, vars)
+  }
+}
+
+# Export reliabilities to Excel, one sheet per mind condition (construct),
+# with body features nested as rows within that sheet
+library(openxlsx)
+
+reliability_wb <- createWorkbook()
+
+for (construct in names(reliability_table)) {
+  # sheet names max 31 chars in Excel; truncate if needed
+  sheet_name <- substr(construct, 1, 31)
+  addWorksheet(reliability_wb, sheet_name)
+  writeData(reliability_wb, sheet_name, reliability_table[[construct]])
+}
+
+saveWorkbook(reliability_wb, "Reliabilities_by_MindCondition.xlsx", overwrite = TRUE)
+
+# Frequency of Exposure
+mbi <- add_composite(mbi, "IntC", c("fint", "fexp"))
+
+# Save data with indices
+write.xlsx(mbi, "MBI_withindices.xlsx")
+save(mbi, file = "MCI_withindices.Rdata")
+
+# --- Index summary statistics ---
+plot_var <- function(data, var, title, xlab, xbreaks, ybreaks = seq(0, 1200, 60)) {
+  print(psych::describe(data[[var]]))
+  print(ggplot(data, aes(x = .data[[var]])) +
+          geom_histogram(binwidth = 1) +
+          ggtitle(title) +
+          xlab(xlab) +
+          ylab("Frequency") +
+          scale_x_continuous(breaks = xbreaks) +
+          scale_y_continuous(breaks = ybreaks))
+  stat <- data %>% select(all_of(var))
+  cat(var, "min%:", lapply(stat, function(x) (sum(x == min(xbreaks)) / nrow(stat)) * 100)[[1]], "\n")
+  cat(var, "max%:", lapply(stat, function(x) (sum(x == max(xbreaks)) / nrow(stat)) * 100)[[1]], "\n")
+}
+
+# construct display info: title stem + x-axis label + break sequence
+construct_display <- list(
+  "MPC"        = list(title = "Mind Perception",   xlab = "Not at All - Very Much",             xbreaks = seq(0, 100, 10)),
+  "AITC"       = list(title = "Moral Treatment",    xlab = "Strongly Disagree - Strongly Agree", xbreaks = seq(1, 7, 1)),
+  "SRC"        = list(title = "Support for Rights", xlab = "Strongly Disagree - Strongly Agree", xbreaks = seq(1, 7, 1)),
+  "patiencyRC" = list(title = "Positive Rights",    xlab = "Strongly Disagree - Strongly Agree", xbreaks = seq(1, 7, 1)),
+  "agencyRC"   = list(title = "Negative Rights",    xlab = "Strongly Disagree - Strongly Agree", xbreaks = seq(1, 7, 1)),
+  "RC"         = list(title = "Reciprocity",        xlab = "Not at All - Very Much",             xbreaks = seq(0, 100, 10)),
+  "WC"         = list(title = "Worth",              xlab = "Not at All - Very Much",             xbreaks = seq(0, 100, 10))
+)
+
+suffixes <- c("basicbody", "agentbody", "emotivebody", "biobody", "anthrobody")
+
+for (suf in suffixes) {
+  for (code in names(construct_display)) {
+    var_name <- paste0(code, "_", suf)
+    disp <- construct_display[[code]]
+    plot_var(
+      mbi,
+      var_name,
+      paste0(disp$title, " (", suf, ")"),
+      disp$xlab,
+      disp$xbreaks
+    )
+  }
+}
+
+```
+
+
+```{r ANOVAs}
+
+#--------------------------------------
+## Mixed Model ANOVAs - H1-H4
+#--------------------------------------
+library(rstatix)
+library(car)
+set.seed(12345)
+# --- Define variables ---
+id_var      <- "Pcode"
+between_var <- "mind"
+
+feature_suffixes <- c("basicbody", "agentbody", "emotivebody", "biobody", "anthrobody")
+
+scale_prefixes <- c(
+  "MindPerception"   = "MPC_",
+  "MoralTreatment"    = "AITC_",
+  "SupportForRights"  = "SRC_",
+  "PositiveRights"    = "patiencyRC_",
+  "NegativeRights"    = "agencyRC_",
+  "Reciprocity"       = "RC_",
+  "Worth"             = "WC_"
+)
+
+alpha_raw <- .05
+q_fdr     <- .10   # FDR threshold
+
+add_fdr_flag <- function(df, p_col = "p", padj_col = "p.adj") {
+  df %>%
+    mutate(
+      sig_raw       = .data[[p_col]] < alpha_raw,
+      sig_fdr10     = .data[[padj_col]] < q_fdr,
+      flag_lost_sig = sig_raw & !sig_fdr10   # TRUE = became NS after FDR(.10)
+    )
+}
+
+# --- Shared helper to classify magnitude using Cohen's fixed thresholds.
+# rstatix's own `magnitude` column is computed on whatever effsize it was given
+# (d_z for paired, d for independent) — once we rescale d_z to d_av below, the
+# original magnitude label is stale and must be recomputed on the rescaled value.
+classify_d_magnitude <- function(d) {
+  ad <- abs(d)
+  dplyr::case_when(
+    ad < 0.2 ~ "negligible",
+    ad < 0.5 ~ "small",
+    ad < 0.8 ~ "medium",
+    TRUE     ~ "large"
+  )
+}
+
+# --- Tag an all-independent cohens_d() table with the same schema
+# (d_type / r_pair / cohens_d_raw) used by the paired-and-converted tables,
+# so every effect-size table in the report has identical columns even where
+# no d_z -> d_av conversion was needed.
+tag_independent_d <- function(d_tab) {
+  d_tab %>%
+    dplyr::mutate(
+      d_type       = "independent",
+      r_pair       = NA_real_,
+      cohens_d_raw = effsize
+    )
+}
+
+# --- Pearson r between two within-subject conditions, for every pair in
+# a rstatix pairwise result (e.g. cohens_d(..., paired = TRUE)'s group1/group2).
+# Pearson r is what the d_z -> d_av formula (Var(X1-X2) = Var(X1)+Var(X2)-2Cov)
+# is derived from, so this is the correct r to feed into sqrt(2*(1-r)).
+pairwise_correlations <- function(long_data, id_var, group_var, value_var, group1, group2) {
+  wide <- long_data %>%
+    dplyr::select(dplyr::all_of(c(id_var, group_var, value_var))) %>%
+    tidyr::pivot_wider(names_from = dplyr::all_of(group_var), values_from = dplyr::all_of(value_var))
+
+  purrr::map2_dbl(group1, group2, function(g1, g2) {
+    cor(wide[[g1]], wide[[g2]], use = "complete.obs")
+  })
+}
+
+# --- Helper: attach Cohen's d (+ magnitude) to a t_test/pairwise_t_test result ---
+# Carries d_type / r_pair / cohens_d_raw through the join when
+# d_tab has them, so downstream tables stay self-documenting about which scale
+# each row's `cohens_d` was computed on and whether/how it was rescaled.
+attach_cohens_d <- function(test_tab, d_tab, join_cols = c("group1", "group2")) {
+  extra_cols <- intersect(c("d_type", "r_pair", "cohens_d_raw"), names(d_tab))
+
+  d_tab <- d_tab %>%
+    dplyr::select(dplyr::all_of(c(join_cols, extra_cols)), effsize, magnitude) %>%
+    dplyr::mutate(magnitude = as.character(magnitude)) %>%
+    dplyr::rename(cohens_d = effsize, cohens_d_magnitude = magnitude)
+
+  dplyr::left_join(test_tab, d_tab, by = join_cols)
+}
+
+# --- Function: run one scale's mixed ANOVA + H3 (within-feature pairwise) ---
+run_scale_analysis <- function(data, prefix, suffixes, id_var, between_var) {
+
+  cols <- paste0(prefix, suffixes)
+  missing_cols <- setdiff(cols, names(data))
+  if (length(missing_cols) > 0) {
+    stop(str_c("Missing columns for prefix '", prefix, "': ",
+               str_c(missing_cols, collapse = ", ")))
+  }
+
+  scale_data <- dplyr::select(data, all_of(c(cols, between_var, id_var)))
+
+  scale_long <- pivot_longer(
+    scale_data,
+    cols = all_of(cols),
+    names_to  = "feature",
+    values_to = "value"
+  ) %>%
+    mutate(feature = str_remove(feature, fixed(prefix)),
+           feature = factor(feature, levels = suffixes) 
+           )
+
+  aov_tab <- anova_test(
+    data = scale_long,
+    dv = value, wid = !!sym(id_var),
+    between = !!sym(between_var), within = feature,
+    type = 3, effect.size = "pes"
+  ) %>% get_anova_table(correction = "GG")
+
+  # H3: all 10 pairwise comparisons among the 5 body features (paired, within-subject)
+  pwc_feature <- pairwise_t_test(
+    scale_long, value ~ feature,
+    paired = TRUE, detailed = TRUE
+  ) %>%
+    adjust_pvalue(method = "fdr") %>%
+    add_fdr_flag()
+
+  # Cohen's d for the same 10 paired comparisons (matches pairwise_t_test's pairing/order)
+  d_feature <- cohens_d(scale_long, value ~ feature, paired = TRUE)
+
+  # rstatix computed these as d_z (SD of differences). Convert to d_av so
+  # H3's effect sizes are on the same scale as the independent-samples d values
+  # used elsewhere in the report (H1/H2, and the unpaired rows of H4), rather
+  # than only being safely comparable to each other.
+  r_feature <- pairwise_correlations(
+    scale_long, id_var = id_var, group_var = "feature", value_var = "value",
+    group1 = d_feature$group1, group2 = d_feature$group2
+  )
+  d_feature <- d_feature %>%
+    dplyr::mutate(
+      r_pair       = r_feature,
+      d_type       = "paired",
+      cohens_d_raw = effsize,                                   # d_z, as rstatix originally returned it
+      effsize      = cohens_d_raw * sqrt(2 * (1 - r_pair)),      # overwrite with d_av (comparable scale)
+      magnitude    = classify_d_magnitude(effsize)
+    )
+
+  pwc_feature <- attach_cohens_d(pwc_feature, d_feature)
+
+  list(prefix = prefix, long_data = scale_long, anova = aov_tab, pwc_feature = pwc_feature)
+}
+
+# --- ANOVA for all DVs ---
+results <- map(scale_prefixes, ~ run_scale_analysis(
+  data = mbi, prefix = .x, suffixes = feature_suffixes,
+  id_var = id_var, between_var = between_var
+))
+names(results) <- names(scale_prefixes)
+
+cat("Detected 'mind' condition levels:\n")
+print(unique(mbi[[between_var]]))
+
+#-------------------------------------------------------------------------------
+# --- H1 & H2 — between-subjects ("mind") comparisons ---
+#-------------------------------------------------------------------------------
+# H1/H2 compare mind conditions using a composite score (participant row mean across the
+# 5 features) — this is the directional follow-up to the omnibus ANOVA's
+# main effect of `mind` / feature:mind interaction.
+
+dv_col <- "composite"  
+
+composite_scores <- function(data, prefix, suffixes, between_var, id_var, dv_col) {
+  cols <- paste0(prefix, suffixes)
+  df <- data %>% dplyr::select(all_of(c(cols, between_var, id_var)))
+  if (dv_col == "composite") {
+    df <- df %>% mutate(dv = rowMeans(dplyr::select(df, all_of(cols)), na.rm = TRUE))
+  } else {
+    df <- df %>% rename(dv = all_of(str_c(prefix, dv_col)))
+  }
+  df
+}
+
+# Compute mean/mbi per group level of between_var
+get_group_stats <- function(data, between_var, dv_var = "dv") {
+  data %>%
+    group_by(.data[[between_var]]) %>%
+    summarise(
+      mean = mean(.data[[dv_var]], na.rm = TRUE),
+      sd   = sd(.data[[dv_var]], na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    rename(group = all_of(between_var))
+}
+
+h1_h2_comparisons <- list(
+  H1 = list(
+    c("basicmind", "emotivemind"),
+    c("basicmind", "agenticmind"),
+    c("basicmind", "emotiveagenticmind"),
+    c("basicmind", "agenticemotivemind")
+  ),
+  H2 = list(
+    c("emotivemind", "agenticmind"),
+    c("emotiveagenticmind", "agenticemotivemind")
+  )
+)
+
+h1_h2_results <- map(names(results), function(scale_name) {
+  prefix <- scale_prefixes[[scale_name]]
+  comp_data <- composite_scores(mbi, prefix, feature_suffixes, between_var, id_var, dv_col)
+  dv_formula <- as.formula(str_c("dv ~ ", between_var))
+  
+  ttest_tab <- bind_rows(
+    H1 = t_test(comp_data, dv_formula, comparisons = h1_h2_comparisons$H1, detailed = TRUE),
+    H2 = t_test(comp_data, dv_formula, comparisons = h1_h2_comparisons$H2, detailed = TRUE),
+    .id = "hypothesis"
+  )
+  
+  d_tab <- bind_rows(
+    H1 = cohens_d(comp_data, dv_formula, comparisons = h1_h2_comparisons$H1, paired = FALSE),
+    H2 = cohens_d(comp_data, dv_formula, comparisons = h1_h2_comparisons$H2, paired = FALSE),
+    .id = "hypothesis"
+  ) %>%
+    tag_independent_d()   # schema-tag as independent (no rescaling needed here)
+  
+  # Pull mean/sd per group, then join onto group1 and group2
+  group_stats <- get_group_stats(comp_data, between_var)
+  
+  ttest_tab <- ttest_tab %>%
+    left_join(group_stats, by = c("group1" = "group")) %>%
+    rename(sd1 = sd) %>%
+    dplyr::select(-mean) %>%  # drop redundant mean (estimate1 already has this)
+    left_join(group_stats, by = c("group2" = "group")) %>%
+    rename(sd2 = sd) %>%
+    dplyr::select(-mean)
+  
+  attach_cohens_d(ttest_tab, d_tab, join_cols = c("hypothesis", "group1", "group2")) %>%
+    group_by(hypothesis) %>%
+    mutate(p.adj = p.adjust(p, method = "fdr")) %>%
+    ungroup() %>%
+    add_fdr_flag()
+}) %>% set_names(names(results))
+
+#-------------------------------------------------------------------------------
+# --- H4 — mind x feature "alignment" comparisons (5 comparisons) ---
+#-------------------------------------------------------------------------------
+
+h4_specs <- list(
+  aligned_emotive    = list(mind = "emotivemind", feature = "emotivebody"),
+  full_baseline      = list(mind = "basicmind", feature = "basicbody"),
+  nonaligned_emotive = list(mind = "emotivemind", feature = "basicbody"),
+  aligned_agentic    = list(mind = "agenticmind", feature = "agentbody"),
+  nonaligned_agentic = list(mind = "agenticmind", feature = "basicbody")
+)
+
+h4_pairs <- list(
+  c("aligned_emotive", "full_baseline"),
+  c("aligned_emotive", "nonaligned_emotive"),
+  c("aligned_agentic", "full_baseline"),
+  c("aligned_agentic", "nonaligned_agentic"),
+  c("aligned_emotive", "aligned_agentic")
+)
+
+get_cell <- function(data, prefix, spec, between_var, id_var) {
+  col <- str_c(prefix, spec$feature)
+  data %>%
+    filter(.data[[between_var]] == spec$mind) %>%
+    dplyr::select(all_of(c(id_var, col))) %>%
+    rename(value = all_of(col))
+}
+
+# Run_h4 returns d on a single comparable scale (d_av) for every row,
+# regardless of whether the underlying comparison was paired or independent.
+# Paired rows keep their original d_z in `cohens_d_raw` alongside the Pearson r
+# used to rescale them (`r_pair`), and every row is tagged with `d_type` so the
+# provenance of `cohens_d` is always visible in the output table. This function
+# is reused by all_pairwise_cells_results below.
+run_h4 <- function(data, prefix, specs, pairs, between_var, id_var) {
+  cells <- map(specs, ~ get_cell(data, prefix, .x, between_var, id_var))
+  
+  map_dfr(pairs, function(pr) {
+    spec1 <- specs[[pr[1]]]
+    spec2 <- specs[[pr[2]]]
+    cell1 <- cells[[pr[1]]]
+    cell2 <- cells[[pr[2]]]
+    
+    mean1 <- mean(cell1$value, na.rm = TRUE)
+    mean2 <- mean(cell2$value, na.rm = TRUE)
+    sd1   <- sd(cell1$value,   na.rm = TRUE)
+    sd2   <- sd(cell2$value,   na.rm = TRUE)
+    
+    if (spec1$mind == spec2$mind) {
+      paired_wide <- inner_join(cell1, cell2, by = id_var, suffix = c("_1", "_2"))
+
+      long <- paired_wide %>%
+        pivot_longer(c(value_1, value_2), names_to = "cell", values_to = "value") %>%
+        mutate(cell = if_else(cell == "value_1", pr[1], pr[2]))
+
+      long$cell <- factor(long$cell, levels = c(pr[1], pr[2]))
+      test  <- t_test(long, value ~ cell, paired = TRUE, detailed = TRUE)
+      d_res <- cohens_d(long, value ~ cell, paired = TRUE)
+
+      # d_res$effsize is d_z (SD of differences). Rescale to d_av using the
+      # same paired, complete-case data the test itself used.
+      r_pair       <- cor(paired_wide$value_1, paired_wide$value_2, use = "complete.obs")
+      d_type       <- "paired"
+      cohens_d_raw <- d_res$effsize
+      cohens_d_val <- cohens_d_raw * sqrt(2 * (1 - r_pair))
+    } else {
+      combined <- bind_rows(mutate(cell1, cell = pr[1]), mutate(cell2, cell = pr[2]))
+      combined$cell <- factor(combined$cell, levels = c(pr[1], pr[2]))
+      test <- t_test(combined, value ~ cell, detailed = TRUE)
+      d_res <- cohens_d(combined, value ~ cell, paired = FALSE)
+
+      r_pair       <- NA_real_
+      d_type       <- "independent"
+      cohens_d_raw <- d_res$effsize
+      cohens_d_val <- cohens_d_raw   # already on the comparable scale, no rescaling needed
+    }
+    
+    test %>%
+      mutate(
+        estimate1           = mean1,
+        estimate2           = mean2,
+        sd1                 = sd1,
+        sd2                 = sd2,
+        comparison          = str_c(pr[1], " vs ", pr[2]),
+        d_type              = d_type,
+        r_pair              = r_pair,
+        cohens_d_raw        = cohens_d_raw,           # original rstatix value (d_z if paired, d if independent)
+        cohens_d            = cohens_d_val,           # comparable (d_av) scale -- use this for cross-row comparisons
+        cohens_d_magnitude  = classify_d_magnitude(cohens_d_val)
+      )
+  })
+}
+
+format_report_table <- function(data) {
+  data %>%
+    mutate(
+      across(c(df, statistic, estimate, estimate1, estimate2, sd1, sd2, conf.low, conf.high, cohens_d), ~ sprintf("%.2f", .x)),
+      across(any_of(c("cohens_d_raw", "r_pair")), ~ sprintf("%.2f", .x)),  # Format new diagnostic columns when present
+      across(c(p, p.adj), ~ sprintf("%.3f", .x))
+    )
+}
+h4_results <- map(names(results), function(scale_name) {
+  prefix <- scale_prefixes[[scale_name]]
+  run_h4(mbi, prefix, h4_specs, h4_pairs, between_var, id_var) %>%
+    mutate(p.adj = p.adjust(p, method = "fdr")) %>%
+    add_fdr_flag()
+}) %>% set_names(names(results))
+h4_results_raw <- h4_results
+h4_results <- map(h4_results, format_report_table)
+
+#------------------------------------------------------------------------------
+# --- ALL PAIRWISE COMPARISONS (exploratory, exhaustive) ---
+#------------------------------------------------------------------------------
+mind_levels <- sort(unique(mbi[[between_var]]))
+all_cell_specs <- setNames(
+  unlist(lapply(mind_levels, function(m) {
+    lapply(feature_suffixes, function(f) list(mind = m, feature = f))
+  }), recursive = FALSE),
+  unlist(lapply(mind_levels, function(m) paste(m, feature_suffixes, sep = "__")))
+)
+all_cell_pairs <- combn(names(all_cell_specs), 2, simplify = FALSE)
+
+# No FDR correction on these two exploratory tables
+format_report_table_nofdr <- function(data) {
+  data %>%
+    mutate(
+      across(c(df, statistic, estimate, estimate1, estimate2, sd1, sd2, conf.low, conf.high, cohens_d), ~ sprintf("%.2f", .x)),
+      across(any_of(c("cohens_d_raw", "r_pair")), ~ sprintf("%.2f", .x)),  # FIX: format new diagnostic columns when present
+      across(c(p), ~ sprintf("%.3f", .x))
+    )
+}
+
+# --- All mind x feature cell comparisons ---
+# Inherits the d_z -> d_av rescaling automatically, since it calls the
+# same (now-fixed) run_h4().
+all_pairwise_cells_results <- map(names(results), function(scale_name) {
+  prefix <- scale_prefixes[[scale_name]]
+  run_h4(mbi, prefix, all_cell_specs, all_cell_pairs, between_var, id_var)
+}) %>% set_names(names(results))
+all_pairwise_cells_results_raw <- all_pairwise_cells_results
+all_pairwise_cells_results <- map(all_pairwise_cells_results, format_report_table_nofdr)
+
+# --- All mind condition comparisons ---
+all_mind_pairs <- combn(mind_levels, 2, simplify = FALSE)
+all_pairwise_mind_results <- map(names(results), function(scale_name) {
+  prefix <- scale_prefixes[[scale_name]]
+  comp_data <- composite_scores(mbi, prefix, feature_suffixes, between_var, id_var, dv_col)
+  dv_formula <- as.formula(str_c("dv ~ ", between_var))
+
+  ttest_tab <- t_test(comp_data, dv_formula, comparisons = all_mind_pairs, detailed = TRUE)
+  d_tab <- cohens_d(comp_data, dv_formula, comparisons = all_mind_pairs, paired = FALSE) %>%
+    tag_independent_d()   # schema-tag as independent (no rescaling needed here)
+
+  # Join in group means/mbis, same pattern as h1_h2_results
+  group_stats <- get_group_stats(comp_data, between_var)
+
+  ttest_tab <- ttest_tab %>%
+    left_join(group_stats, by = c("group1" = "group")) %>%
+    rename(sd1 = sd) %>%
+    dplyr::select(-mean) %>%
+    left_join(group_stats, by = c("group2" = "group")) %>%
+    rename(sd2 = sd) %>%
+    dplyr::select(-mean)
+
+  attach_cohens_d(ttest_tab, d_tab)
+}) %>% set_names(names(results))
+# -----------------------------------------------------------------------------
+# Export to Excel
+# -----------------------------------------------------------------------------
+
+wb <- createWorkbook()
+options("openxlsx.numFmt" = "0.000")
+
+anova_list <- map(results, "anova")
+h3_list    <- map(results, "pwc_feature")
+h1h2_list  <- h1_h2_results
+h4_list    <- h4_results
+all_cells_list <- all_pairwise_cells_results
+all_mind_list  <- all_pairwise_mind_results
+
+export_objects(wb, "ANOVAs", anova_list)
+export_objects(wb, "H1_H2_mind_comparisons", h1h2_list)
+export_objects(wb, "H3_feature_comparisons", h3_list)
+export_objects(wb, "H4_alignment_comparisons", h4_list)
+export_objects(wb, "AllPairwise_MindByFeature", all_cells_list)
+export_objects(wb, "AllPairwise_MindConditions", all_mind_list)
+
+saveWorkbook(wb, "MBI_ANOVAs.xlsx", overwrite = TRUE)
+
+#--------------------------------------
+## Paper Plots - H1-H4 (boxplot)
+#--------------------------------------
+library(patchwork)
+library(RColorBrewer)
+
+dir.create("paper_plots", showWarnings = FALSE)
+
+# ---- Set2 palette lookup ----
+# brewer.pal(8, "Set2") order: 1 teal, 2 orange/salmon, 3 periwinkle,
+# 4 pink, 5 lime/green, 6 yellow, 7 tan, 8 gray
+set2_pal        <- RColorBrewer::brewer.pal(8, "Set2")
+set2_teal       <- set2_pal[1]
+set2_salmon     <- set2_pal[2]
+set2_periwinkle <- set2_pal[3]
+set2_pink       <- set2_pal[4]
+set2_lime       <- set2_pal[5]
+set2_yellow     <- set2_pal[6]
+set2_gray       <- set2_pal[8]
+
+# ---- Reusable paper theme layer for plots ----
+paper_theme <- function(title, tag, y_min, y_max, y_breaks, headroom_mult = 0.05) {
+  headroom <- headroom_mult * (y_max - y_min)
+  list(
+    coord_cartesian(ylim = c(y_min, y_max + headroom)),
+    scale_y_continuous(breaks = y_breaks),
+    theme_classic(base_family = "serif"),
+    theme(
+      legend.position = "none",
+      plot.title = element_text(hjust = 0, vjust = 1, margin = margin(b = 3), size = 18, family = "serif", face = "plain"),
+      plot.title.position = "plot",
+      plot.tag = element_text(hjust = 0, vjust = 0, margin = margin(b = 5), size = 18, family = "serif", face = "plain"),
+      plot.margin = margin(t = 5, b = 5),
+      axis.title.x = element_blank(),
+      axis.title.y = element_blank(),
+      axis.text = element_text(family = "serif", face = "plain", size = 14),
+      # Parallel to the x-axis, centered under each tick
+      axis.text.x = element_text(angle = 0, hjust = 0.5, vjust = 1),
+      legend.text = element_text(family = "serif", face = "plain", size = 14),
+      legend.title = element_blank()
+    ),
+    labs(title = title, tag = tag)
+  )
+}
+
+# ---- Panel titles and tags ----
+title_map <- c(
+  MindPerception    = "Mind Perception",
+  MoralTreatment    = "Moral Treatment",
+  SupportForRights  = "Support for Rights",
+  PositiveRights    = "Patiency Rights",
+  NegativeRights    = "Agency Rights",
+  Worth             = "Intrinsic Moral Worth",
+  Reciprocity       = "Reciprocity"
+)
+
+tag_map <- c(
+  SupportForRights  = "A",
+  MoralTreatment    = "B",
+  MindPerception    = "C",
+  Worth             = "D",
+  Reciprocity       = "E",
+  PositiveRights    = "F",
+  NegativeRights    = "G"
+)
+
+# ---- Per-construct y-axis ranges ----
+y_axis_map <- list(
+  MindPerception    = list(y_min = 0, y_max = 100, y_breaks = seq(0, 100, 20)),
+  MoralTreatment    = list(y_min = 1, y_max = 7,   y_breaks = 1:7),
+  SupportForRights  = list(y_min = 1, y_max = 7,   y_breaks = 1:7),
+  PositiveRights    = list(y_min = 1, y_max = 7,   y_breaks = 1:7),
+  NegativeRights    = list(y_min = 1, y_max = 7,   y_breaks = 1:7),
+  Worth             = list(y_min = 0, y_max = 100, y_breaks = seq(0, 100, 20)),
+  Reciprocity       = list(y_min = 0, y_max = 100, y_breaks = seq(0, 100, 20))
+)
+
+# ---- x-axis level order (left -> right on the plot) ----
+# Order "right to left"; reversed here since ggplot
+# draws factor levels left to right.
+h1_h2_level_order <- c("emotiveagenticmind", "emotivemind", "agenticemotivemind",
+                        "agenticmind", "basicmind")
+
+h4_level_order <- c("nonaligned_emotive", "aligned_emotive", "nonaligned_agentic",
+                     "aligned_agentic", "full_baseline")
+
+h3_level_order <- c("anthrobody", "biobody", "emotivebody", "agentbody", "basicbody")
+
+# ---- x-axis label recodes (per plot family), stacked & parallel to axis ----
+h1_h2_labels <- c(
+  basicmind           = "Basic\nControl",
+  agenticmind         = "Agentic\nMind",
+  emotivemind         = "Emotive\nMind",
+  agenticemotivemind  = "Agentic-Emotive\nMind",
+  emotiveagenticmind  = "Emotive-Agentic\nMind"
+)
+
+h3_labels <- c(
+  agentbody   = "Agentic\nBody",
+  anthrobody  = "Anthropomorphic\nBody",
+  basicbody   = "Basic\nBody",
+  biobody     = "Biomorphic\nBody",
+  emotivebody = "Emotive\nBody"
+)
+
+h4_labels <- c(
+  aligned_agentic     = "Aligned\nAgentic Mind\nand\nAgentic Body",
+  aligned_emotive     = "Aligned\nEmotive Mind\nand\nEmotive Body",
+  full_baseline       = "Aligned\nBasic Control\nand\nBasic Body",
+  nonaligned_agentic  = "Non-Aligned\nAgentic Mind\nand\nBasic Body",
+  nonaligned_emotive  = "Non-Aligned\nEmotive Mind\nand\nBasic Body"
+)
+
+# ---- Fill colors (RColorBrewer Set2), keyed by raw group value ----
+h1_h2_colors <- c(
+  basicmind           = set2_gray,
+  agenticmind         = set2_teal,
+  agenticemotivemind  = set2_periwinkle,
+  emotivemind         = set2_pink,
+  emotiveagenticmind  = set2_salmon
+)
+
+h4_colors <- c(
+  full_baseline       = set2_gray,
+  aligned_agentic     = set2_teal,
+  nonaligned_agentic  = colorspace::lighten(set2_teal, 0.75),
+  aligned_emotive     = set2_pink,
+  nonaligned_emotive  = colorspace::lighten(set2_pink, 0.75) 
+)
+
+h3_colors <- c(
+  basicbody   = set2_gray,
+  agentbody   = set2_teal,
+  emotivebody = set2_pink,
+  biobody     = set2_lime,
+  anthrobody  = set2_yellow
+)
+
+# ---- Significance bracket helpers ---
+# NOTE (item 8): the default rstatix cutpoints are
+#   c(1, .05, .01, .001, .0001) -> c("ns","*","**","***","****")
+# so any p < .0001 legitimately gets a 4th star under the defaults.
+# Capping at 3 tiers here so nothing below .001 is treated specially.
+# Uses the RAW (unadjusted) p-value, not p.adj, per request.
+sig_pairs_for <- function(stat_test) {
+  stat_test %>%
+    rstatix::add_significance(
+      "p",
+      cutpoints = c(0, 0.001, 0.01, 0.05, 1),
+      symbols   = c("***", "**", "*", "ns")
+    ) %>%
+    rename(sig_label = p.signif) %>%
+    filter(sig_label != "ns")
+}
+
+# Headroom scales with the number of stacked brackets so nothing gets clipped.
+headroom_for <- function(sig_pairs, base = 0.08, per_bracket = 0.14) {
+  n_brackets <- nrow(sig_pairs)
+  base + per_bracket * max(0, n_brackets - 1)
+}
+
+# Draw significance brackets (segment + two downticks + star label) above the
+# raw data, one per significant pair, stacked so they don't overlap.
+add_sig_brackets <- function(plot, sig_pairs, data, group_var, value_var) {
+  if (nrow(sig_pairs) == 0) return(plot)
+
+  # x positions follow the factor level order of the grouping variable,
+  # which is what scale_x_discrete() draws the axis in
+  lvls <- levels(factor(data[[group_var]]))
+
+  y_range   <- range(data[[value_var]], na.rm = TRUE)
+  data_span <- diff(y_range)
+  step      <- data_span * 0.12
+  y_start   <- y_range[2] + data_span * 0.06
+  tick      <- step * 0.25
+
+  for (i in seq_len(nrow(sig_pairs))) {
+    g1 <- as.character(sig_pairs$group1[i])
+    g2 <- as.character(sig_pairs$group2[i])
+    x1 <- which(lvls == g1)
+    x2 <- which(lvls == g2)
+    if (length(x1) == 0 || length(x2) == 0) next
+
+    y_pos <- y_start + (i - 1) * step
+
+    plot <- plot +
+      annotate("segment", x = x1, xend = x2, y = y_pos, yend = y_pos, linewidth = 0.5) +
+      annotate("segment", x = x1, xend = x1, y = y_pos, yend = y_pos - tick, linewidth = 0.5) +
+      annotate("segment", x = x2, xend = x2, y = y_pos, yend = y_pos - tick, linewidth = 0.5) +
+      annotate("text", x = (x1 + x2) / 2, y = y_pos + tick,
+               label = sig_pairs$sig_label[i], size = 5, family = "serif")
+  }
+
+  plot
+}
+
+# ---- Box plot helpers ----
+# Summarize mean +/- SE per group, overlaid on top of the raw-data boxplot
+box_summary <- function(data, group_var, value_var) {
+  data %>%
+    group_by(.data[[group_var]]) %>%
+    summarise(
+      mean_val = mean(.data[[value_var]], na.rm = TRUE),
+      sd_val   = sd(.data[[value_var]], na.rm = TRUE),
+      n        = sum(!is.na(.data[[value_var]])),
+      se_val   = sd_val / sqrt(n),
+      .groups  = "drop"
+    )
+}
+
+# Build the boxplot (raw distribution) + errorbar + mean-point layers,
+# with per-group fill colors from RColorBrewer Set2
+box_layer <- function(data, summary_data, group_var, value_var,
+                       fill_colors, line_color = "grey30") {
+  list(
+    geom_boxplot(
+      data = data,
+      aes(x = .data[[group_var]], y = .data[[value_var]], fill = .data[[group_var]]),
+      color = line_color, alpha = 0.7,
+      width = .5, outlier.shape = 21, outlier.size = 1.5,
+      outlier.alpha = .4, outlier.color = line_color,
+      inherit.aes = FALSE
+    ),
+    scale_fill_manual(values = fill_colors),
+    geom_errorbar(
+      data = summary_data,
+      aes(x = .data[[group_var]], ymin = mean_val - se_val, ymax = mean_val + se_val),
+      width = .1, linewidth = .6, color = "black",
+      inherit.aes = FALSE
+    ),
+    geom_point(
+      data = summary_data,
+      aes(x = .data[[group_var]], y = mean_val),
+      size = 3, shape = 18, color = "black",
+      inherit.aes = FALSE
+    )
+  )
+}
+
+# ---- H3: within-feature comparisons (5 body features) ----
+plot_h3 <- function(res, scale_name) {
+  ax <- y_axis_map[[scale_name]]
+
+  data <- res$long_data
+  data$feature <- factor(data$feature, levels = h3_level_order)
+
+  sig_pairs    <- sig_pairs_for(res$pwc_feature)
+  summary_data <- box_summary(data, "feature", "value")
+
+  p <- ggplot(data, aes(x = feature, y = value)) +
+    box_layer(data, summary_data, "feature", "value", fill_colors = h3_colors) +
+    scale_x_discrete(labels = h3_labels) +
+    paper_theme(
+      title         = title_map[[scale_name]],
+      tag           = tag_map[[scale_name]],
+      y_min         = ax$y_min,
+      y_max         = ax$y_max,
+      y_breaks      = ax$y_breaks,
+      headroom_mult = headroom_for(sig_pairs)
+    )
+
+  add_sig_brackets(p, sig_pairs, data, "feature", "value")
+}
+
+h3_plots <- imap(results, plot_h3)
+iwalk(h3_plots, ~ ggsave(paste0("paper_plots/H3_", .y, ".png"), .x, width = 8, height = 6, dpi = 300))
+
+# ---- H1 & H2: between-subjects "mind" comparisons on the composite score ----
+plot_h1_h2 <- function(scale_name) {
+  ax <- y_axis_map[[scale_name]]
+  prefix <- scale_prefixes[[scale_name]]
+  plot_data <- composite_scores(mbi, prefix, feature_suffixes, between_var, id_var, dv_col)
+  plot_data[[between_var]] <- factor(plot_data[[between_var]], levels = h1_h2_level_order)
+
+  sig_pairs    <- sig_pairs_for(h1_h2_results[[scale_name]])
+  summary_data <- box_summary(plot_data, between_var, "dv")
+
+  p <- ggplot(plot_data, aes(x = .data[[between_var]], y = dv)) +
+    box_layer(plot_data, summary_data, between_var, "dv", fill_colors = h1_h2_colors) +
+    scale_x_discrete(labels = h1_h2_labels) +
+    paper_theme(
+      title         = title_map[[scale_name]],
+      tag           = tag_map[[scale_name]],
+      y_min         = ax$y_min,
+      y_max         = ax$y_max,
+      y_breaks      = ax$y_breaks,
+      headroom_mult = headroom_for(sig_pairs)
+    )
+
+  add_sig_brackets(p, sig_pairs, plot_data, between_var, "dv")
+}
+
+h1_h2_plots <- map(names(results), plot_h1_h2) %>% set_names(names(results))
+iwalk(h1_h2_plots, ~ ggsave(paste0("paper_plots/H1_H2_", .y, ".png"), .x, width = 8, height = 6, dpi = 300))
+
+# ---- H4: mind x feature "alignment" comparisons (5 cells) ----
+build_h4_data <- function(scale_name) {
+  prefix <- scale_prefixes[[scale_name]]
+  imap_dfr(h4_specs, ~ get_cell(mbi, prefix, .x, between_var, id_var) %>% mutate(cell = .y))
+}
+
+plot_h4 <- function(scale_name) {
+  ax <- y_axis_map[[scale_name]]
+  plot_data <- build_h4_data(scale_name)
+  plot_data$cell <- factor(plot_data$cell, levels = h4_level_order)
+
+  sig_pairs    <- sig_pairs_for(h4_results_raw[[scale_name]])
+  summary_data <- box_summary(plot_data, "cell", "value")
+
+  p <- ggplot(plot_data, aes(x = cell, y = value)) +
+    box_layer(plot_data, summary_data, "cell", "value", fill_colors = h4_colors) +
+    scale_x_discrete(labels = h4_labels) +
+    paper_theme(
+      title         = title_map[[scale_name]],
+      tag           = tag_map[[scale_name]],
+      y_min         = ax$y_min,
+      y_max         = ax$y_max,
+      y_breaks      = ax$y_breaks,
+      headroom_mult = headroom_for(sig_pairs)
+    ) +
+    theme(axis.text.x = element_text(size = 14))  
+
+  add_sig_brackets(p, sig_pairs, plot_data, "cell", "value")
+}
+
+h4_plots <- map(names(results), plot_h4) %>% set_names(names(results))
+iwalk(h4_plots, ~ ggsave(paste0("paper_plots/H4_", .y, ".png"), .x, width = 8, height = 6, dpi = 300))
+
+# --- Combine and save plots ---
+combine_and_save <- function(plot_list, filename_stub,
+                              dv1 = "MoralTreatment", dv2 = "SupportForRights",
+                              width = 14, height = 6, dpi = 300) {
+  combined <- (plot_list[[dv1]] | plot_list[[dv2]]) +
+    plot_layout(widths = c(.7, .7)) +
+    plot_annotation(tag_levels = "A") &
+    theme(
+      legend.position = "none",
+      plot.margin = margin(.1, .1, .1, .1, unit = "in")
+    )
+
+  ggsave(paste0(filename_stub, ".png"), combined, width = width, height = height, dpi = dpi)
+  ggsave(paste0(filename_stub, ".pdf"), combined, width = width, height = height, dpi = dpi)
+
+  combined
+}
+
+FigAITC_SRC_H1H2 <- combine_and_save(h1_h2_plots, "paper_plots/FigMoralTreatment_SupportForRights_H1H2")
+FigAITC_SRC_H3   <- combine_and_save(h3_plots,    "paper_plots/FigMoralTreatment_SupportForRights_H3")
+FigAITC_SRC_H4   <- combine_and_save(h4_plots,    "paper_plots/FigMoralTreatment_SupportForRights_H4",
+                                      width = 18, height = 7)
+
+FigAITC_SRC_H1H2
+FigAITC_SRC_H3
+FigAITC_SRC_H4
+
+```
+
+```{r ANOVA EH1}
+
+#--------------------------------------
+## Mixed Model ANOVA EH1 5x5x2
+#--------------------------------------
+set.seed(12345)
+# --- Define variables ---
+id_var      <- "Pcode"
+between_var <- "mind"
+feature_suffixes <- c("basicbody", "agentbody", "emotivebody", "biobody", "anthrobody")
+scale_prefixes <- c(
+  "PositiveRights" = "patiencyRC_",
+  "NegativeRights" = "agencyRC_"
+)
+# Map each DV to its "rights" level for the combined 5x5x2 design
+rights_labels <- c(
+  "PositiveRights" = "patiency",
+  "NegativeRights" = "agency"
+)
+alpha_raw <- .05
+q_fdr     <- .10
+
+# --- Stack patiency + agency into one long dataset with a "rights" factor ---
+combined_long <- imap(scale_prefixes, function(prefix, dv_name) {
+  cols <- paste0(prefix, feature_suffixes)
+  mbi %>%
+    dplyr::select(all_of(c(cols, between_var, id_var))) %>%
+    pivot_longer(all_of(cols), names_to = "feature", values_to = "value") %>%
+    mutate(
+      feature = str_remove(feature, fixed(prefix)),
+      rights  = rights_labels[[dv_name]]
+    )
+}) %>%
+  bind_rows() %>%
+  mutate(
+    rights        = factor(rights, levels = c("patiency", "agency")),
+    !!between_var := factor(.data[[between_var]])
+  )
+
+aov_3way <- anova_test(
+  data = combined_long,
+  dv = value, wid = !!sym(id_var),
+  between = !!sym(between_var), within = c(feature, rights),
+  type = 3, effect.size = "pes"
+) %>% get_anova_table(correction = "GG")
+cat("\n5x5x2 mixed ANOVA (mind x feature x rights):\n")
+print(aov_3way)
+
+# --- Follow-up for EH1b-d: does the patiency-agency gap differ by feature, within each mind?---
+pwc_rights_by_feature_mind <- combined_long %>%
+  group_by(across(all_of(c(between_var, "feature")))) %>%
+  pairwise_t_test(value ~ rights, paired = TRUE, detailed = TRUE) %>%
+  ungroup() %>%
+  adjust_pvalue(method = "fdr") %>%
+  add_fdr_flag()
+
+# --- Follow-up: main effect of mind ---
+mind_main_means <- combined_long %>%
+  group_by(across(all_of(c(id_var, between_var)))) %>%
+  summarise(value = mean(value, na.rm = TRUE), .groups = "drop")
+
+pwc_mind_main <- mind_main_means %>%
+  pairwise_t_test(as.formula(paste("value ~", between_var)), paired = FALSE, detailed = TRUE) %>%
+  adjust_pvalue(method = "fdr") %>%
+  add_fdr_flag()
+
+# --- Follow-up: main effect of body/feature ---
+feature_main_means <- combined_long %>%
+  group_by(across(all_of(c(id_var, "feature")))) %>%
+  summarise(value = mean(value, na.rm = TRUE), .groups = "drop")
+
+pwc_feature_main <- feature_main_means %>%
+  pairwise_t_test(value ~ feature, paired = TRUE, detailed = TRUE) %>%
+  adjust_pvalue(method = "fdr") %>%
+  add_fdr_flag()
+
+# --- Follow-up: rights compared within each feature ---
+pwc_rights_within_feature <- combined_long %>%
+  group_by(feature) %>%
+  pairwise_t_test(value ~ rights, paired = TRUE, detailed = TRUE) %>%
+  ungroup() %>%
+  adjust_pvalue(method = "fdr") %>%
+  add_fdr_flag()
+
+# --- Follow-up: body/feature compared within each level of rights ("body x rights") ---
+cat("\nPairwise comparisons of feature (body), within each level of rights (body x rights):\n")
+pwc_feature_within_rights <- combined_long %>%
+  group_by(rights) %>%
+  pairwise_t_test(value ~ feature, paired = TRUE, detailed = TRUE) %>%
+  ungroup() %>%
+  adjust_pvalue(method = "fdr") %>%
+  add_fdr_flag()
+print(pwc_feature_within_rights)
+
+# --- Follow-up: mind compared within each level of rights ("mind x rights") ---
+cat("\nPairwise comparisons of mind, within each level of rights (mind x rights):\n")
+mind_by_rights_means <- combined_long %>%
+  group_by(across(all_of(c(id_var, between_var, "rights")))) %>%
+  summarise(value = mean(value, na.rm = TRUE), .groups = "drop")
+
+pwc_mind_within_rights <- mind_by_rights_means %>%
+  group_by(rights) %>%
+  pairwise_t_test(as.formula(paste("value ~", between_var)), paired = FALSE, detailed = TRUE) %>%
+  ungroup() %>%
+  adjust_pvalue(method = "fdr") %>%
+  add_fdr_flag()
+print(pwc_mind_within_rights)
+
+# --- Follow-up: rights compared within each level of mind ("rights x mind") ---
+cat("\nPairwise comparisons of rights, within each level of mind (rights x mind):\n")
+pwc_rights_within_mind <- mind_by_rights_means %>%
+  group_by(across(all_of(between_var))) %>%
+  pairwise_t_test(value ~ rights, paired = TRUE, detailed = TRUE) %>%
+  ungroup() %>%
+  adjust_pvalue(method = "fdr") %>%
+  add_fdr_flag()
+print(pwc_rights_within_mind)
+
+#--------------------------------------
+## Lollipop plot: mind x feature, patiency + agency dodged, cowplot grid layout
+#--------------------------------------
+library(cowplot)
+library(ggtext)  # for element_textbox_simple, to recreate the grey strip banner
+
+dodge_width <- 0.32
+
+rights_facet_labels <- c(patiency = "Patiency Rights", agency = "Agency Rights")
+
+h1_h2_labels <- c(
+  basicmind           = "Basic\nControl",
+  agenticmind         = "Agentic\nMind",
+  emotivemind         = "Emotive\nMind",
+  agenticemotivemind  = "Agentic-\nEmotive\nMind",
+  emotiveagenticmind  = "Emotive-\nAgentic\nMind"
+)
+
+combined_long <- combined_long %>%
+  mutate(!!between_var := factor(.data[[between_var]], levels = h1_h2_level_order))
+
+summary_3way <- combined_long %>%
+  group_by(across(all_of(c(between_var, "feature", "rights")))) %>%
+  summarise(
+    mean_val = mean(value, na.rm = TRUE),
+    se_val   = sd(value, na.rm = TRUE) / sqrt(n()),
+    n        = n(),
+    .groups  = "drop"
+  ) %>%
+  mutate(
+    x_num   = as.numeric(.data[[between_var]]),
+    x_dodge = x_num + if_else(rights == "patiency", -dodge_width / 2, dodge_width / 2)
+  )
+
+rights_sig <- pwc_rights_by_feature_mind %>%
+  rstatix::add_significance(
+    "p",
+    cutpoints = c(0, 0.001, 0.01, 0.05, 1),
+    symbols   = c("***", "**", "*", "ns")
+  ) %>%
+  rename(sig_label = p.signif) %>%
+  filter(sig_label != "ns") %>%
+  select(all_of(between_var), feature, sig_label)
+
+rights_tick_data <- summary_3way %>%
+  select(all_of(c(between_var, "feature", "rights", "mean_val", "x_dodge"))) %>%
+  pivot_wider(names_from = rights, values_from = c(mean_val, x_dodge)) %>%
+  inner_join(rights_sig, by = c(between_var, "feature")) %>%
+  mutate(
+    y_pos   = pmax(mean_val_patiency, mean_val_agency, na.rm = TRUE) + 0.35,
+    tick    = 0.08,
+    y_label = y_pos + tick + 0.05
+  )
+
+mind_breaks <- seq_along(h1_h2_level_order)
+mind_labels <- h1_h2_labels[h1_h2_level_order]
+
+# --- Single-panel builder: one body-feature panel, patiency+agency dodged ---
+make_panel <- function(feature_name, show_y_axis = TRUE) {
+  d  <- filter(summary_3way, feature == feature_name)
+  td <- filter(rights_tick_data, feature == feature_name)
+
+  p <- ggplot(d, aes(x = x_dodge, y = mean_val)) +
+    geom_segment(aes(xend = x_dodge, y = 1, yend = mean_val, color = rights),
+                 linewidth = 0.6) +
+    geom_errorbar(aes(ymin = mean_val - se_val, ymax = mean_val + se_val, color = rights),
+                  width = 0.1, linewidth = 0.5) +
+    geom_point(aes(color = rights, shape = rights), size = 2.2)
+
+  if (nrow(td) > 0) {
+    p <- p +
+      geom_segment(data = td,
+                   aes(x = x_dodge_patiency, xend = x_dodge_agency, y = y_pos, yend = y_pos),
+                   inherit.aes = FALSE, linewidth = 0.4, color = "black") +
+      geom_segment(data = td,
+                   aes(x = x_dodge_patiency, xend = x_dodge_patiency, y = y_pos, yend = y_pos - tick),
+                   inherit.aes = FALSE, linewidth = 0.4, color = "black") +
+      geom_segment(data = td,
+                   aes(x = x_dodge_agency, xend = x_dodge_agency, y = y_pos, yend = y_pos - tick),
+                   inherit.aes = FALSE, linewidth = 0.4, color = "black") +
+      geom_text(data = td,
+                aes(x = (x_dodge_patiency + x_dodge_agency) / 2, y = y_label, label = sig_label),
+                inherit.aes = FALSE, size = 5, family = "serif")
+  }
+
+  p <- p +
+    labs(title = h3_labels[[feature_name]], x = NULL, y = "Mean Rating",
+         color = "Rights", shape = "Rights") +
+    scale_color_manual(values = c(patiency = "#08519C", agency = "#9ECAE1"),
+                        labels = rights_facet_labels) +
+    scale_shape_manual(values = c(patiency = 16, agency = 17),
+                        labels = rights_facet_labels) +
+    coord_cartesian(ylim = c(1, 4.3)) +
+    scale_y_continuous(breaks = 1:4) +
+    scale_x_continuous(breaks = mind_breaks, labels = mind_labels,
+                        limits = c(0.5, length(mind_breaks) + 0.5), expand = c(0, 0)) +
+    theme_bw(base_family = "serif") +
+    theme(
+      panel.grid          = element_blank(),
+      panel.border        = element_rect(color = "black", fill = NA),  # keep panel box only
+      plot.title          = element_textbox_simple(
+        size    = 14,
+        family  = "serif",
+        halign  = 0.5,
+        fill    = "grey90",
+        box.color = "black",
+        color   = "black",
+        padding = margin(5.5, 5.5, 5.5, 5.5),
+        margin  = margin(b = 0),
+        width   = unit(1, "npc")
+      ),
+      plot.title.position = "panel",
+      axis.text           = element_text(size = 14),
+      axis.text.x         = element_text(angle = 0, hjust = 0.5, vjust = 1, size = 14),
+      axis.title          = element_text(size = 14),
+      legend.position     = "none",
+      plot.background     = element_rect(color = NA, fill = NA),
+      plot.margin         = margin(t = 6, r = 6, b = 6, l = 6)
+    )
+
+  if (!show_y_axis) {
+    p <- p + theme(axis.text.y = element_blank(), axis.title.y = element_blank(),
+                    axis.ticks.y = element_blank())
+  }
+
+  p
+}
+
+p_anthro   <- make_panel("anthrobody")
+p_emotive  <- make_panel("emotivebody",  show_y_axis = FALSE)
+p_bio      <- make_panel("biobody")
+p_agentic  <- make_panel("agentbody",    show_y_axis = FALSE)
+p_basic    <- make_panel("basicbody",    show_y_axis = FALSE)
+
+legend_source <- p_anthro + theme(legend.position = "bottom",
+                                   legend.text = element_text(size = 14),
+                                   legend.title = element_text(size = 14))
+shared_legend <- get_legend(legend_source)
+
+row1 <- plot_grid(p_anthro, p_emotive, NULL,
+                   nrow = 1, rel_widths = c(1, 1, 1), align = "h")
+
+row2 <- plot_grid(p_bio, p_agentic, p_basic,
+                   nrow = 1, rel_widths = c(1, 1, 1), align = "h")
+
+combined <- plot_grid(row1, row2, shared_legend,
+                       ncol = 1, rel_heights = c(1, 1, 0.1))
+
+print(combined)
+ggsave("lollipop_mind_feature_rights.png", combined, width = 17, height = 11, dpi = 300)
+ggsave("lollipop_mind_feature_rights.pdf", combined, width = 17, height = 11, dpi = 300)
+
+# --- Export to Excel ---
+wb <- createWorkbook()
+options("openxlsx.numFmt" = "0.000")
+
+addWorksheet(wb, "5x5x2_ANOVA")
+writeData(wb, "5x5x2_ANOVA", aov_3way, rowNames = FALSE)
+
+addWorksheet(wb, "5x5x2_PWC_Rights")
+writeData(wb, "5x5x2_PWC_Rights", pwc_rights_by_feature_mind, rowNames = FALSE)
+
+addWorksheet(wb, "5x5x2_PWC_Mind_Main")
+writeData(wb, "5x5x2_PWC_Mind_Main", pwc_mind_main, rowNames = FALSE)
+
+addWorksheet(wb, "5x5x2_PWC_Feature_Main")
+writeData(wb, "5x5x2_PWC_Feature_Main", pwc_feature_main, rowNames = FALSE)
+
+addWorksheet(wb, "5x5x2_PWC_Rights_within_Feature")
+writeData(wb, "5x5x2_PWC_Rights_within_Feature", pwc_rights_within_feature, rowNames = FALSE)
+
+addWorksheet(wb, "5x5x2_PWC_Rights_within_Mind")
+writeData(wb, "5x5x2_PWC_Rights_within_Mind", pwc_rights_within_mind, rowNames = FALSE)
+
+addWorksheet(wb, "5x5x2_PWC_Feature_within_Rights")
+writeData(wb, "5x5x2_PWC_Feature_within_Rights", pwc_feature_within_rights, rowNames = FALSE)
+
+addWorksheet(wb, "5x5x2_PWC_Mind_within_Rights")
+writeData(wb, "5x5x2_PWC_Mind_within_Rights", pwc_mind_within_rights, rowNames = FALSE)
+
+saveWorkbook(wb, "MBI_5x5x2.xlsx", overwrite = TRUE)
+
+```
+
+```{r descriptives and visualizations}
+
+# --- Define variables ---
+id_var      <- "Pcode"
+between_var <- "mind"
+feature_suffixes <- c("basicbody", "agentbody", "emotivebody", "biobody", "anthrobody")
+scale_prefixes <- c(
+  "MindPerception"    = "MPC_",
+  "MoralTreatment"     = "AITC_",
+  "SupportForRights"   = "SRC_",
+  "PositiveRights"     = "patiencyRC_",
+  "NegativeRights"     = "agencyRC_",
+  "Reciprocity"        = "RC_",
+  "Worth"              = "WC_"
+)
+
+# --- One small helper: descriptives for whatever grouping columns you pass in ---
+get_descriptives <- function(data, ...) {
+  data %>%
+    group_by(...) %>%
+    summarise(
+      n      = sum(!is.na(score)),
+      mean   = mean(score, na.rm = TRUE),
+      sd     = sd(score, na.rm = TRUE),
+      median = median(score, na.rm = TRUE),
+      min    = min(score, na.rm = TRUE),
+      max    = max(score, na.rm = TRUE),
+      .groups = "drop"
+    )
+}
+
+# --- Loop over each composite scale: print descriptives + collect for export ---
+wb_desc <- createWorkbook()
+for (scale_name in names(scale_prefixes)) {
+  prefix <- scale_prefixes[[scale_name]]
+  cols   <- paste0(prefix, feature_suffixes)
+  long_mbi <- mbi %>%
+    select(all_of(id_var), all_of(between_var), all_of(cols)) %>%
+    pivot_longer(all_of(cols), names_to = "feature", values_to = "score") %>%
+    mutate(feature = str_remove(feature, prefix))
+  cat("\n\n==================== ", scale_name, " ====================\n")
+  desc_between <- long_mbi %>%
+    group_by(across(all_of(c(id_var, between_var)))) %>%
+    summarise(score = mean(score, na.rm = TRUE), .groups = "drop") %>%
+    get_descriptives(.data[[between_var]])
+  desc_within  <- get_descriptives(long_mbi, feature)
+  desc_inter   <- get_descriptives(long_mbi, .data[[between_var]], feature)
+  cat("\n-- Between-subjects (", between_var, ") --\n")
+  print(desc_between)
+  cat("\n-- Within-subjects (feature) --\n")
+  print(desc_within)
+  cat("\n-- Interaction (", between_var, " x feature) --\n")
+  print(desc_inter)
+  # each sheet name capped at 31 characters (Excel limit)
+  addWorksheet(wb_desc, substr(paste0(scale_name, "_between"), 1, 31))
+  writeData(wb_desc, substr(paste0(scale_name, "_between"), 1, 31), desc_between)
+  addWorksheet(wb_desc, substr(paste0(scale_name, "_within"), 1, 31))
+  writeData(wb_desc, substr(paste0(scale_name, "_within"), 1, 31), desc_within)
+  addWorksheet(wb_desc, substr(paste0(scale_name, "_interaction"), 1, 31))
+  writeData(wb_desc, substr(paste0(scale_name, "_interaction"), 1, 31), desc_inter)
+}
+
+#--------------------------------------------------------------------
+# --- Single-item rights measures: descriptives + lollipop plots ---
+#--------------------------------------------------------------------
+# Same feature_suffixes as above. Each item's column prefix + feature suffix
+# gives the raw column name, e.g. "vote_neg" + "basicbody" = "vote_negbasicbody".
+#
+# Depends on objects created in paper_plots_revised.R and the lollipop script:
+#   h1_h2_level_order, h1_h2_colors, h1_h2_labels  (mind condition order/colors/labels)
+#   h3_level_order, h3_labels                       (body condition order/labels)
+# Run/source those first.
+
+item_prefixes <- c(
+  vote_neg          = "vote_neg",
+  property_neg      = "property_neg",
+  money_neg         = "money_neg",
+  contracts_neg     = "contracts_neg",
+  job_neg           = "job_neg",
+  legal_neg         = "legal_neg",
+  legal_pos         = "legal_pos",
+  copyright_pos     = "copyright_pos",
+  remuneration_pos  = "remuneration_pos",
+  consent_pos       = "consent_pos",
+  shutdown_pos      = "shutdown_pos",
+  cruelty_pos       = "cruelty_pos"
+)
+
+dir.create("item_lollipops", showWarnings = FALSE)
+item_lollipop_plots <- list()
+
+for (item_name in names(item_prefixes)) {
+  prefix <- item_prefixes[[item_name]]
+  cols   <- paste0(prefix, feature_suffixes)
+
+  # Skip cleanly (with a warning) if this item's columns aren't in mbi,
+  # rather than erroring out the whole loop.
+  missing_cols <- setdiff(cols, names(mbi))
+  if (length(missing_cols) > 0) {
+    warning(sprintf("Skipping '%s': missing columns %s", item_name, paste(missing_cols, collapse = ", ")))
+    next
+  }
+
+  long_item <- mbi %>%
+    select(all_of(id_var), all_of(between_var), all_of(cols)) %>%
+    pivot_longer(all_of(cols), names_to = "feature", values_to = "score") %>%
+    mutate(
+      feature       = str_remove(feature, fixed(prefix)),
+      !!between_var := factor(.data[[between_var]], levels = h1_h2_level_order),
+      feature       = factor(feature, levels = h3_level_order)
+    )
+
+  cat("\n\n==================== ", item_name, " ====================\n")
+
+  desc_between <- long_item %>%
+    group_by(across(all_of(c(id_var, between_var)))) %>%
+    summarise(score = mean(score, na.rm = TRUE), .groups = "drop") %>%
+    get_descriptives(.data[[between_var]])
+  desc_within  <- get_descriptives(long_item, feature)
+  desc_inter   <- get_descriptives(long_item, .data[[between_var]], feature)
+
+  cat("\n-- Between-subjects (", between_var, ") --\n")
+  print(desc_between)
+  cat("\n-- Within-subjects (feature) --\n")
+  print(desc_within)
+  cat("\n-- Interaction (", between_var, " x feature) --\n")
+  print(desc_inter)
+
+  addWorksheet(wb_desc, substr(paste0(item_name, "_between"), 1, 31))
+  writeData(wb_desc, substr(paste0(item_name, "_between"), 1, 31), desc_between)
+  addWorksheet(wb_desc, substr(paste0(item_name, "_within"), 1, 31))
+  writeData(wb_desc, substr(paste0(item_name, "_within"), 1, 31), desc_within)
+  addWorksheet(wb_desc, substr(paste0(item_name, "_interaction"), 1, 31))
+  writeData(wb_desc, substr(paste0(item_name, "_interaction"), 1, 31), desc_inter)
+
+  # ---- Lollipop: mean score by mind (x-axis/color), faceted by body feature ----
+  summary_item <- long_item %>%
+    group_by(across(all_of(c(between_var, "feature")))) %>%
+    summarise(
+      mean_val = mean(score, na.rm = TRUE),
+      se_val   = sd(score, na.rm = TRUE) / sqrt(n()),
+      n        = n(),
+      .groups  = "drop"
+    )
+
+  # Mind is between-subjects (paired = FALSE). Significance tiers (asterisks)
+  # are based on the RAW (unadjusted) p-value, capped at 3 tiers -- same
+  # scheme as sig_pairs_for() in paper_plots_revised.R and pairwise_3way in
+  # lollipop_plot_revised.R, kept consistent across every plot in this thread.
+  pairwise_item <- long_item %>%
+    group_by(feature) %>%
+    pairwise_t_test(as.formula(paste("score ~", between_var)), paired = FALSE, detailed = TRUE) %>%
+    ungroup() %>%
+    rstatix::add_significance(
+      "p",
+      cutpoints = c(0, 0.001, 0.01, 0.05, 1),
+      symbols   = c("***", "**", "*", "ns")
+    ) %>%
+    rename(sig_label = p.signif) %>%
+    filter(sig_label != "ns")
+
+  feature_ranges_item <- long_item %>%
+    group_by(feature) %>%
+    summarise(
+      y_max     = max(score, na.rm = TRUE),
+      data_span = diff(range(score, na.rm = TRUE)),
+      .groups   = "drop"
+    )
+
+  brackets_item <- pairwise_item %>%
+    left_join(feature_ranges_item, by = "feature") %>%
+    group_by(feature) %>%
+    mutate(
+      x1    = match(group1, h1_h2_level_order),
+      x2    = match(group2, h1_h2_level_order),
+      step  = data_span * 0.12,
+      tick  = step * 0.25,
+      y_pos = y_max + data_span * 0.06 + (row_number() - 1) * step
+    ) %>%
+    ungroup()
+
+  # All items share the same 1-7 response scale, so the lollipop base and
+  # y-axis are fixed rather than derived per-item (matching the composite
+  # PositiveRights/NegativeRights plots elsewhere in the paper).
+  y_bottom_item <- 1
+  max_brackets_item <- if (nrow(brackets_item) == 0) 0 else max(table(brackets_item$feature))
+  headroom_item <- 0.08 + 0.14 * max(0, max_brackets_item - 1)
+  y_top_item <- 7 + headroom_item * (7 - 1)
+
+  p_item <- ggplot(summary_item, aes(x = .data[[between_var]], y = mean_val, color = .data[[between_var]])) +
+    geom_segment(aes(x = .data[[between_var]], xend = .data[[between_var]], y = y_bottom_item, yend = mean_val), linewidth = 1) +
+    geom_point(size = 3) +
+    geom_errorbar(aes(ymin = mean_val - se_val, ymax = mean_val + se_val), width = 0.15, linewidth = 0.6) +
+    { if (nrow(brackets_item) > 0) list(
+        geom_segment(data = brackets_item, aes(x = x1, xend = x2, y = y_pos, yend = y_pos),
+                     inherit.aes = FALSE, linewidth = 0.5),
+        geom_segment(data = brackets_item, aes(x = x1, xend = x1, y = y_pos, yend = y_pos - tick),
+                     inherit.aes = FALSE, linewidth = 0.5),
+        geom_segment(data = brackets_item, aes(x = x2, xend = x2, y = y_pos, yend = y_pos - tick),
+                     inherit.aes = FALSE, linewidth = 0.5),
+        geom_text(data = brackets_item, aes(x = (x1 + x2) / 2, y = y_pos + tick, label = sig_label),
+                  inherit.aes = FALSE, size = 4, family = "serif")
+      ) } +
+    facet_wrap(~ feature, nrow = 1, labeller = labeller(feature = h3_labels)) +
+    coord_cartesian(ylim = c(y_bottom_item, y_top_item)) +
+    scale_y_continuous(breaks = 1:7) +
+    scale_x_discrete(labels = h1_h2_labels) +
+    scale_color_manual(values = h1_h2_colors) +
+    labs(x = "Mind Condition", y = "Mean Rating", color = between_var) +
+    theme_bw(base_family = "serif") +
+    theme(
+      panel.grid       = element_blank(),
+      legend.position  = "none",
+      strip.background = element_rect(fill = "grey90", color = "black"),
+      strip.text       = element_text(family = "serif", face = "plain", size = 12),
+      axis.text        = element_text(family = "serif", face = "plain", size = 11),
+      axis.text.x      = element_text(angle = 45, hjust = 1, vjust = 1),
+      axis.title       = element_text(family = "serif", face = "plain", size = 14)
+    )
+
+  item_lollipop_plots[[item_name]] <- p_item
+  ggsave(file.path("item_lollipops", paste0(item_name, ".png")), p_item, width = 12, height = 4, dpi = 300)
+}
+
+# --- Export all descriptives (composite scales + single items) to Excel ---
+saveWorkbook(wb_desc, "MBI_descriptives.xlsx", overwrite = TRUE)
+
+```
+
+```{r path analysis}
+
+#-----------------------------
+## Multilevel path analysis
+#-----------------------------
+
+# EH2
+
+# Multilevel Path Analyses (2-1-1 mediation) in lavaan
+#
+# X  = condition dummy (Level 2, between-subjects, fixed effect)
+# M  = Reciprocity (RC), Worth (WC)          -- vary within-subject (5 occasions)
+# Y  = Moral Treatment (AITC), Support for Rights (SRC) -- vary within-subject (5 occasions)
+#
+# Design: subject (Pcode) = Level-2 cluster; the 5 body-feature occasions per
+# subject = Level-1 units. X is constant within cluster, so the X -> M -> Y
+# mediation chain is estimated entirely at Level 2 (between-subjects). Level 1
+# captures residual within-subject covariance among RC/WC/AITC/SRC across
+# occasions.
+# =============================================================================
+
+library(lavaan)
+
+set.seed(12345)
+ 
+id_var           <- "Pcode"
+between_var      <- "mind"
+feature_suffixes <- c("basicbody", "agentbody", "emotivebody", "biobody", "anthrobody")
+ 
+# --- Build long data: one row per subject x feature-occasion with RC, WC, AITC, SRC as columns. ---
+make_long_scale <- function(data, prefix, suffixes, id_var, between_var) {
+  cols <- paste0(prefix, suffixes)
+  data %>%
+    dplyr::select(all_of(c(id_var, between_var, cols))) %>%
+    pivot_longer(all_of(cols), names_to = "feature", values_to = prefix) %>%
+    mutate(feature = str_remove(feature, fixed(prefix)))
+}
+ 
+rc_long   <- make_long_scale(mbi, "RC_",   feature_suffixes, id_var, between_var)
+wc_long   <- make_long_scale(mbi, "WC_",   feature_suffixes, id_var, between_var)
+aitc_long <- make_long_scale(mbi, "AITC_", feature_suffixes, id_var, between_var)
+src_long  <- make_long_scale(mbi, "SRC_",  feature_suffixes, id_var, between_var)
+ 
+long_full <- rc_long %>%
+  left_join(wc_long,   by = c(id_var, between_var, "feature")) %>%
+  left_join(aitc_long, by = c(id_var, between_var, "feature")) %>%
+  left_join(src_long,  by = c(id_var, between_var, "feature"))
+ 
+# --- Build the two dummy-coded / filtered analysis samples ---
+control_level  <- "basicmind"   
+emotive_levels <- c("emotivemind", "emotiveagenticmind")
+agentic_levels <- c("agenticmind", "agenticemotivemind")
+ 
+data_emotive <- long_full %>%
+  filter(.data[[between_var]] %in% c(control_level, emotive_levels)) %>%
+  mutate(mind_emotive = if_else(.data[[between_var]] %in% emotive_levels, 1, 0))
+ 
+data_agentic <- long_full %>%
+  filter(.data[[between_var]] %in% c(control_level, agentic_levels)) %>%
+  mutate(mind_agentic = if_else(.data[[between_var]] %in% agentic_levels, 1, 0))
+ 
+
+# --- Multilevel 2-1-1 mediation model ---
+build_ml_mediation_model <- function(x_var) {
+  str_c('
+level: 1
+  # residual within-subject covariances
+  RC_ ~~ WC_ + AITC_ + SRC_
+  WC_ ~~ AITC_ + SRC_
+  AITC_ ~~ SRC_
+ 
+level: 2
+  # between-subjects structural (mediation) model -- X is a fixed effect
+  RC_   ~ a1*', x_var, '
+  WC_   ~ a2*', x_var, '
+  AITC_ ~ b1*RC_ + b2*WC_ + cp1*', x_var, '
+  SRC_  ~ b3*RC_ + b4*WC_ + cp2*', x_var, '
+  RC_ ~~ WC_
+  AITC_ ~~ SRC_
+ 
+  # indirect / direct / total effects
+  ind_AITC_via_RC := a1*b1
+  ind_AITC_via_WC := a2*b2
+  ind_SRC_via_RC  := a1*b3
+  ind_SRC_via_WC  := a2*b4
+  total_AITC      := cp1 + ind_AITC_via_RC + ind_AITC_via_WC
+  total_SRC       := cp2 + ind_SRC_via_RC  + ind_SRC_via_WC
+')
+}
+ 
+model_emotive <- build_ml_mediation_model("mind_emotive")
+model_agentic <- build_ml_mediation_model("mind_agentic")
+ 
+fit_emotive <- sem(model_emotive, data = data_emotive, cluster = id_var)
+fit_agentic <- sem(model_agentic, data = data_agentic, cluster = id_var)
+ 
+summary(fit_emotive, standardized = TRUE, fit.measures = TRUE)
+summary(fit_agentic, standardized = TRUE, fit.measures = TRUE)
+ 
+# --- Tidy parameter tables (all paths + indirect/total effects) for export ---
+tidy_fit <- function(fit, label) {
+  parameterEstimates(fit, standardized = TRUE) %>%
+    filter(op %in% c("~", ":=")) %>%
+    mutate(model = label) %>%
+    dplyr::select(model, level, lhs, op, rhs, label, est, se, z, pvalue,
+                  std.all, ci.lower, ci.upper)
+}
+ 
+emotive_table <- tidy_fit(fit_emotive, "Emotive vs Control")
+agentic_table <- tidy_fit(fit_agentic, "Agentic vs Control")
+ 
+# --- Export ---
+wb <- createWorkbook()
+options("openxlsx.numFmt" = "0.000")
+export_objects(wb, "Multilevel_Mediation", list(
+  "Emotive_vs_Control" = emotive_table,
+  "Agentic_vs_Control" = agentic_table
+))
+saveWorkbook(wb, "MBI_MultilevelSEM.xlsx", overwrite = TRUE)
+
+```

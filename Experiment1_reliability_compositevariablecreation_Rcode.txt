@@ -1,0 +1,314 @@
+#------------------------------------------------
+## Install and load packages, functions, and data
+#------------------------------------------------
+
+# Load packages (additional packages added when needed throughout)
+
+library(readxl)
+library(openxlsx)
+library(tidyverse) 
+library(psych)
+library(plotly)
+library(emmeans)
+library(survey)
+library(car)
+
+supp <- read_excel("AIMS_Supplement_2025.xlsx")
+
+source("Functions_Rcode.R")
+
+#----------------------
+## Reliability Analyses 
+#----------------------
+
+# Mind Perception - total
+alpha_MP <- supp %>% 
+  dplyr::select(MP1, MP2, MP3, MP4, agency1, agency2) %>%
+  alpha
+alpha_MP
+
+# Emotion Perception
+print(corr.test(supp$MP1, supp$MP2, adjust = "none"), short = F)
+
+# Cognition Perception
+print(corr.test(supp$MP3, supp$MP4, adjust = "none"), short = F)
+
+# Agency Perception
+print(corr.test(supp$agency1, supp$agency2, adjust = "none"), short = F)
+
+# Mind Authenticity
+alpha_MA <- supp %>% 
+  dplyr::select(MP1authenticity, MP3authenticity, agency1authenticity) %>%
+  alpha
+alpha_MA
+
+# Support for AI rights
+alpha_AIrights <- supp %>% 
+  dplyr::select(PMC8, PMC9, PMC13) %>%
+  alpha
+alpha_AIrights
+
+# Pro-AI activism
+alpha_AIactivism <- supp %>% 
+  dplyr::select(PMC10, PMC11, PMC12) %>%
+  alpha
+alpha_AIactivism
+
+# AI Treatment 
+alpha_AItrt <- supp %>% 
+  dplyr::select(MCE1, MCE2, MCE3, MCE4, MCE5, MCE6) %>%
+  alpha
+alpha_AItrt
+
+# Godspeed - anthropomorphism
+print(corr.test(supp$naturalness_anth, supp$consciousness_anth, adjust = "none"), short = F)
+
+# Godspeed - likeability
+print(corr.test(supp$friendliness_likeability, supp$pleasantness_likeability, adjust = "none"), short = F)
+
+# Godspeed - intelligence
+print(corr.test(supp$competence_intellig, supp$responsibleness_intellig, adjust = "none"), short = F)
+
+# Affective Trust
+print(corr.test(supp$afftrust1, supp$afftrust2, adjust = "none"), short = F)
+
+# Cognitive Trust
+print(corr.test(supp$cogtrust1, supp$cogtrust2R, adjust = "none"), short = F)
+
+# Perceived Threat - total
+alpha_PT <- supp %>% 
+  dplyr::select(economicthreat, physicalthreat, valuethreat, uniquenessthreat) %>%
+  alpha
+alpha_PT
+
+# Realistic Threat
+print(corr.test(supp$economicthreat, supp$physicalthreat, adjust = "none"), short = F)
+
+# Symbolic Threat
+print(corr.test(supp$valuethreat, supp$uniquenessthreat, adjust = "none"), short = F)
+
+# Substratism
+alpha_substratism <- supp %>% 
+  dplyr::select(substratism1, substratism2R, substratism3, substratism4,
+                substratism5, substratism6, substratism7, substratism8) %>%
+  alpha
+alpha_substratism
+
+# Literacy
+print(corr.test(supp$literacy1, supp$literacy2, adjust = "none"), short = F)
+
+# Frequency of Exposure to AI narratives
+print(corr.test(supp$fint, supp$fexp, adjust = "none"), short = F)
+
+#--------------------------------------------------------
+## Index Variable Creation with "no opinion" coded as "4" 
+#--------------------------------------------------------
+
+# Mind Perception - total
+MPdata <- dplyr::select(supp, c("Pcode", "MP1", "MP2", "MP3", "MP4",
+                                "agency1", "agency2")) %>%
+  rowwise() %>%
+  mutate(MPC = mean(c(MP1, MP2, MP3, MP4, agency1, agency2)))
+MPdata <- dplyr::select(MPdata, c("Pcode", "MPC"))
+supp <- full_join(supp, MPdata, by = "Pcode")
+
+# Emotion Perception
+MPEdata <- dplyr::select(supp, c("Pcode", "MP1", "MP2")) %>%
+  rowwise() %>%
+  mutate(MPCE = mean(c(MP1, MP2)))
+MPEdata <- dplyr::select(MPEdata, c("Pcode", "MPCE"))
+supp <- full_join(supp, MPEdata, by = "Pcode")
+
+# Cognition Perception
+MPCdata <- dplyr::select(supp, c("Pcode", "MP3", "MP4")) %>%
+  rowwise() %>%
+  mutate(MPCC = mean(c(MP3, MP4)))
+MPCdata <- dplyr::select(MPCdata, c("Pcode", "MPCC"))
+supp <- full_join(supp, MPCdata, by = "Pcode")
+
+# Agency Perception 
+MPAGdata <- dplyr::select(supp, c("Pcode", "agency1", "agency2")) %>%
+  rowwise() %>%
+  mutate(MPAGC = mean(c(agency1, agency2)))
+MPAGdata <- dplyr::select(MPAGdata, c("Pcode", "MPAGC"))
+supp <- full_join(supp, MPAGdata, by = "Pcode")
+
+# Mind Authenticity
+MPAdata <- dplyr::select(supp, c("Pcode", "MP1authenticity", "MP3authenticity",
+                                "agency1authenticity")) %>%
+  rowwise() %>%
+  mutate(MPAC = mean(c(MP1authenticity, MP3authenticity, agency1authenticity)))
+MPAdata <- dplyr::select(MPAdata, c("Pcode", "MPAC"))
+supp <- full_join(supp, MPAdata, by = "Pcode")
+
+# Support for AI rights
+SARdata <- dplyr::select(supp, c("Pcode", "PMC8", "PMC9", "PMC13")) %>%
+  rowwise() %>%
+  mutate(SARC = mean(c(PMC8, PMC9, PMC13)))
+SARdata <- dplyr::select(SARdata, c("Pcode", "SARC"))
+supp <- full_join(supp, SARdata, by = "Pcode")
+
+# Pro-AI activism
+PAAdata <- dplyr::select(supp, c("Pcode", "PMC10", "PMC11", "PMC12")) %>%
+  rowwise() %>%
+  mutate(PAAC = mean(c(PMC10, PMC11, PMC12)))
+PAAdata <- dplyr::select(PAAdata, c("Pcode", "PAAC"))
+supp <- full_join(supp, PAAdata, by = "Pcode")
+
+# AI Treatment
+AITdata <- dplyr::select(supp, c("Pcode", "MCE1", "MCE2", "MCE3", 
+                                   "MCE4", "MCE5", "MCE6")) %>%
+  rowwise() %>%
+  mutate(AITC = mean(c(MCE1, MCE2, MCE3, MCE4, MCE5, MCE6)))
+AITdata <- dplyr::select(AITdata, c("Pcode", "AITC"))
+supp <- full_join(supp, AITdata, by = "Pcode")
+
+# Godspeed - anthropomorphism
+Ganthdata <- dplyr::select(supp, c("Pcode", "naturalness_anth", "consciousness_anth")) %>%
+  rowwise() %>%
+  mutate(GAC = mean(c(naturalness_anth, consciousness_anth)))
+Ganthdata <- dplyr::select(Ganthdata, c("Pcode", "GAC"))
+supp <- full_join(supp, Ganthdata, by = "Pcode")
+
+# Godspeed - likeability
+Glikedata <- dplyr::select(supp, c("Pcode", "friendliness_likeability", "pleasantness_likeability")) %>%
+  rowwise() %>%
+  mutate(GLC = mean(c(friendliness_likeability, pleasantness_likeability)))
+Glikedata <- dplyr::select(Glikedata, c("Pcode", "GLC"))
+supp <- full_join(supp, Glikedata, by = "Pcode")
+
+# Godspeed - intelligence
+Gintldata <- dplyr::select(supp, c("Pcode", "competence_intellig", "responsibleness_intellig")) %>%
+  rowwise() %>%
+  mutate(GIC = mean(c(competence_intellig, responsibleness_intellig)))
+Gintldata <- dplyr::select(Gintldata, c("Pcode", "GIC"))
+supp <- full_join(supp, Gintldata, by = "Pcode")
+
+# Affective Trust
+Afftrustdata <- dplyr::select(supp, c("Pcode", "afftrust1", "afftrust2")) %>%
+  rowwise() %>%
+  mutate(ATC = mean(c(afftrust1, afftrust2)))
+Afftrustdata <- dplyr::select(Afftrustdata, c("Pcode", "ATC"))
+supp <- full_join(supp, Afftrustdata, by = "Pcode")
+
+# Cognitive Trust
+Cogtrustdata <- dplyr::select(supp, c("Pcode", "cogtrust1", "cogtrust2R")) %>%
+  rowwise() %>%
+  mutate(CTC = mean(c(cogtrust1, cogtrust2R)))
+Cogtrustdata <- dplyr::select(Cogtrustdata, c("Pcode", "CTC"))
+supp <- full_join(supp, Cogtrustdata, by = "Pcode")
+                             
+# Perceived Threat - total
+PTdata <- dplyr::select(supp, c("Pcode", "economicthreat", "physicalthreat", 
+                                "valuethreat", "uniquenessthreat")) %>%
+  rowwise() %>%
+  mutate(PTC = mean(c(economicthreat, physicalthreat, valuethreat, uniquenessthreat)))
+PTdata <- dplyr::select(PTdata, c("Pcode", "PTC"))
+supp <- full_join(supp, PTdata, by = "Pcode")
+
+# Realistic Threat
+PTRdata <- dplyr::select(supp, c("Pcode", "economicthreat", "physicalthreat")) %>%
+  rowwise() %>%
+  mutate(PTRC = mean(c(economicthreat, physicalthreat)))
+PTRdata <- dplyr::select(PTRdata, c("Pcode", "PTRC"))
+supp <- full_join(supp, PTRdata, by = "Pcode")
+
+# Symbolic Threat
+PTSdata <- dplyr::select(supp, c("Pcode", "valuethreat", "uniquenessthreat")) %>%
+  rowwise() %>%
+  mutate(PTSC = mean(c(valuethreat, uniquenessthreat)))
+PTSdata <- dplyr::select(PTSdata, c("Pcode", "PTSC"))
+supp <- full_join(supp, PTSdata, by = "Pcode")
+
+# Substratism
+Subdata <- dplyr::select(supp, c("Pcode", "substratism1", "substratism2R", 
+                                 "substratism3", "substratism4",
+                                 "substratism5", "substratism6", 
+                                 "substratism7", "substratism8")) %>%
+  rowwise() %>%
+  mutate(SC = mean(c(substratism1, substratism2R, substratism3, substratism4,
+                      substratism5, substratism6, substratism7, substratism8)))
+Subdata <- dplyr::select(Subdata, c("Pcode", "SC"))
+supp <- full_join(supp, Subdata, by = "Pcode")
+
+# Literacy
+Litdata <- dplyr::select(supp, c("Pcode", "literacy1", "literacy2")) %>%
+  rowwise() %>%
+  mutate(LC = mean(c(literacy1, literacy2)))
+Litdata <- dplyr::select(Litdata, c("Pcode", "LC"))
+supp <- full_join(supp, Litdata, by = "Pcode")
+
+# Frequency of Exposure
+Intdata <- dplyr::select(supp, c("Pcode", "fint", "fexp")) %>%
+  rowwise() %>%
+  mutate(IntC = mean(c(fint, fexp)))
+Intdata <- dplyr::select(Intdata, c("Pcode", "IntC"))
+supp <- full_join(supp, Intdata, by = "Pcode")
+
+#-------------------------------
+## Experimental Section Analysis
+#-------------------------------
+
+# Load Packages
+library(performance)
+library(ggfortify)
+library(broom)
+library(QuantPsyc)
+library(lmtest)
+
+# Recode condition variables to factors
+supp <- supp %>% 
+  mutate(condition = as.factor(condition),
+         entitytype = as.factor(entitytype),
+         mentalfaculty = as.factor(mentalfaculty),
+         gender = as.factor(gender),
+         raceethnicity = as.factor(raceethnicity),
+         region = as.factor(region),
+         education_recode = as.factor(education_recode),
+         diet = as.factor(diet),
+         religion = as.factor(religion),
+         religionRNR = as.factor(religionRNR),
+         own = as.factor(own),
+         work = as.factor(work),
+         smart = as.factor(smart)
+         )
+
+# Condition assignment numbers
+supp %>% 
+  group_by(condition) %>% 
+  summarise(no_rows = length(condition))
+
+supp %>% 
+  group_by(entitytype) %>% 
+  summarise(no_rows = length(entitytype))
+
+supp %>% 
+  group_by(mentalfaculty) %>% 
+  summarise(no_rows = length(mentalfaculty))
+
+# Variable Prep for Regressions
+
+# Relevel factor predictors for largest group
+supp <- supp %>%
+  mutate(
+    raceethnicity = fct_relevel(raceethnicity, "White"),
+    region = fct_relevel(region, "South"),
+    religion = fct_relevel(religion, "Protestant"),
+    diet = fct_relevel(diet, "Meat-eater"),
+    mentalfaculty = fct_relevel(mentalfaculty, "none"),
+    entitytype = fct_relevel(entitytype, "robotAI"))
+
+
+# Mean center predictors without a meaningful zero
+forcen <- supp[, c("Pcode", "age", "politics", "IntC", "income")]
+forcen[c(2:5)] <- lapply(forcen[c(2:5)], function(x) {
+  meanCenter(x)
+})
+forcen <- dplyr::rename(forcen, agecen = "age", 
+                        polcen = "politics",
+                        intcen = "IntC",
+                        incomecen = "income")
+supp <- full_join(supp, forcen, by = "Pcode")
+
+# Save full data for future analysis
+write.xlsx(supp, "AIMS_Supplement_2025_indices.xlsx")
