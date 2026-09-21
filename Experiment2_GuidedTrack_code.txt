@@ -1,0 +1,2900 @@
+
+-- Information and consent
+
+*page
+
+	In this study, we will ask you to review some profiles for developments at a technology company and then answer some questions.
+
+	*list
+		You must be at least 18 years old to take part in this study.
+		Your participation is voluntary and you can end the study at any time.
+		Participation will take approximately 20 minutes.
+		All of your responses will be anonymous.
+		
+	We will ask questions to ensure you are paying attention, and you cannot go back in this survey, so please take your time before answering.
+
+	*question: I have read the information above and consent to taking part in the study.
+		*type: choice
+		Yes, continue to the study.
+		No, I do not want to take part.
+		*save: consent
+		
+	*button: Next
+			
+*if: consent = "No, I do not want to take part."
+	*goto: https://app.prolific.com/submissions/complete?cc=
+	
+-- ID collection
+		
+*page 
+	
+	*question: Please enter your Prolific ID below:
+		*save: prolific_id
+
+	*button: Next  
+
+-- Mind manipulation instructions
+
+*page
+
+	On the next page, you will read information about some products being developed by a tech company. 
+	
+	*button: Next  
+	
+*page	
+	
+	Enki Industries is a developer of robotic technologies. Enki creates a variety of robotic bodies to suit various consumer and industrial purposes. 
+	
+	*list
+		By definition, *robots* have to be able to *interact with the physical environment*.
+		Robots have either *physical bodies* or *physical parts* like levers or wheels. 
+	
+	*button: Next  
+
+
+-- Mind features independent variable, between-subjects
+
+-- Set text values for piping
+
+>> basicmind = ["the basic control system"]
+>> agencymind = ["the agent AI system"]
+>> emotionmind = ["the emotion AI system"]
+>> agencyemotionmind = ["the 80% agent and 20% emotion AI system"]
+>> emotionagencymind = ["the 80% emotion and 20% agent AI system"]
+>> bmr = ["<b>80% navigation</b> capabilities to map environments in real time and <b>20% observation</b> capabilities to keep tabs on their battery status"]
+>> amr = ["<b>80% agency</b> capabilities to have their own goals, take independent action to achieve them, and choose their own behavior and <b>20% observation</b> capabilities to keep tabs on their battery status"]
+>> emr = ["<b>80% emotion</b> capabilities to express emotions like empathy and sympathy, detect moods and feelings, and regulate their own feelings and <b>20% observation</b> capabilities to keep tabs on their battery status"]
+>> aemr = ["<b>80% agency</b> capabilities to have their own goals, take independent action to achieve them, and choose their own behavior and <b>20% emotion</b> capabilities to express emotions like empathy and sympathy, detect moods and feelings, and regulate their own feelings"]
+>> eamr = ["<b>80% emotion</b> capabilities to express emotions like empathy and sympathy, detect moods and feelings, and regulate their own feelings and <b>20% agency</b> capabilities to have their own goals, take independent action to achieve them, and choose their own behavior"]
+
+*experiment: mind
+	*group: basicmind
+		>> selectedmind = basicmind
+		>> mindreminder = bmr
+		>> systemtype = ["a basic control system"]
+		*page
+		
+			*html
+			
+				<h3 style="text-align:left">Enki's robots are run by<b> basic control systems.</b></h3>
+				<br>
+				<p style="font-size:110%; font-family:arial">Basic control systems are:</p>
+				<br>
+				<table style="font-size:100%; width:100%; border:1px solid black">
+					<colgroup>
+						<col span="1" style="width:100%">
+					</colgroup>
+					<tbody>
+					<tr style="border:1px solid black"><td style="text-align:left"><b>Rules and instructions</b> such as <b>software programs</b> that tell the robot what to do when something specific happens.</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left">For example, if the robot encounters the edge of a stair, then a software program is triggered to turn it around to move away from the edge.</td></tr>
+					</tbody>
+				</table>
+				<br>
+				<p style="font-size:110%; font-family:arial">Enki's basic control systems have:</p>
+				<br>
+				<table style="font-size:100%; width:100%; border:1px solid black">
+					<colgroup>
+						<col span="1" style="width:100%">
+					</colgroup>
+					<tbody>
+					<tr style="border:1px solid black"><td style="text-align:left"><b>80% navigation</b> capabilities to <b>map environments in real time</b>.</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left"><b>20% observation</b> capabilities to <b>keep tabs on their battery status</b>.</td></tr>
+					</tbody>
+				</table>	
+				<br>	
+				<p style="font-size:110%; font-family:arial">For example, robots with <b>basic control systems</b> can:</p>
+				<br>
+				<table style="font-size:100%; width:100%; border:1px solid black">
+					<colgroup>
+						<col span="1" style="width:100%">
+					</colgroup>
+					<tbody>
+					<tr style="border:1px solid black"><td style="text-align:left">follow a path.</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left">avoid obstacles.</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left">track positions.</td></tr>
+					</tbody>
+				</table>
+			
+			*button: Next
+			
+	*group: agenticmind
+		>> selectedmind = agencymind
+		>> mindreminder = amr		
+		>> systemtype = ["an AI system"]
+		*page
+		
+			*html
+			
+				<h3 style="text-align:left">Enki's robots are run by<b> artificial intelligence (AI) systems.</b></h3>
+				<br>
+				<p style="font-size:110%; font-family:arial">AI systems are:</p>
+				<br>
+				<table style="font-size:100%; width:100%; border:1px solid black">
+					<colgroup>
+						<col span="1" style="width:100%">
+					</colgroup>
+					<tbody>
+					<tr style="border:1px solid black"><td style="text-align:left"><b>Algorithms</b> such as <b>large language models</b> that allow the robot to converse in human languages or solve complex problems.</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left">For example, if the robot encounters a person in the room, then the robot is able to generate language to converse with the person.</td></tr>
+					</tbody>
+				</table>
+				<br>
+				<p style="font-size:110%; font-family:arial">Enki's AI systems have:</p>
+				<br>
+				<table style="font-size:100%; width:100%; border:1px solid black">
+					<colgroup>
+						<col span="1" style="width:100%">
+					</colgroup>
+					<tbody>
+					<tr style="border:1px solid black"><td style="text-align:left"><b>80% agency</b> capabilities to <b>have their own goals, take independent action to achieve them, and choose their own behavior</b>.</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left"><b>20% observation</b> capabilities to <b>keep tabs on their battery status</b>.</td></tr>
+					</tbody>
+				</table>	
+				<br>	
+				<p style="font-size:110%; font-family:arial">For example, robots with <b>agentic AI systems</b> can:</p>
+				<br>
+				<table style="font-size:100%; width:100%; border:1px solid black">
+					<colgroup>
+						<col span="1" style="width:100%">
+					</colgroup>
+					<tbody>
+					<tr style="border:1px solid black"><td style="text-align:left">plan a meeting.</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left">organize a calendar.</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left">send emails.</td></tr>
+					</tbody>
+				</table>
+			
+			*button: Next
+				
+	*group: emotivemind
+		>> selectedmind = emotionmind
+		>> mindreminder = emr		
+		>> systemtype = ["an AI system"]
+		*page
+		
+			*html
+			
+				<h3 style="text-align:left">Enki's robots are run by<b> artificial intelligence (AI) systems.</b></h3>
+				<br>
+				<p style="font-size:110%; font-family:arial">AI systems are:</p>
+				<br>
+				<table style="font-size:100%; width:100%; border:1px solid black">
+					<colgroup>
+						<col span="1" style="width:100%">
+					</colgroup>
+					<tbody>
+					<tr style="border:1px solid black"><td style="text-align:left"><b>Algorithms</b> such as <b>large language models</b> that allow the robot to converse in human languages or solve complex problems.</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left">For example, if the robot encounters a person in the room, then the robot is able to generate language to converse with the person.</td></tr>
+					</tbody>
+				</table>
+				<br>
+				<p style="font-size:110%; font-family:arial">Enki's AI systems have:</p>
+				<br>
+				<table style="font-size:100%; width:100%; border:1px solid black">
+					<colgroup>
+						<col span="1" style="width:100%">
+					</colgroup>
+					<tbody>
+					<tr style="border:1px solid black"><td style="text-align:left"><b>80% emotion</b> capabilities to <b>express emotions like empathy and sympathy, detect moods and feelings, and regulate their own feelings</b>.</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left"><b>20% observation</b> capabilities to <b>keep tabs on their battery status</b>.</td></tr>
+					</tbody>
+				</table>	
+				<br>	
+				<p style="font-size:110%; font-family:arial">For example, robots with <b>emotive AI</b> systems can:</p>
+				<br>
+				<table style="font-size:100%; width:100%; border:1px solid black">
+					<colgroup>
+						<col span="1" style="width:100%">
+					</colgroup>
+					<tbody>
+					<tr style="border:1px solid black"><td style="text-align:left">react to situations.</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left">express excitement and disappointment.</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left">match conversation tone.</td></tr>
+					</tbody>
+				</table>
+			
+			*button: Next
+					
+	*group: agenticemotivemind
+		>> selectedmind = agencyemotionmind
+		>> mindreminder = aemr		
+		>> systemtype = ["an AI system"]
+		*page
+		
+			*html
+			
+				<h3 style="text-align:left">Enki's robots are run by<b> artificial intelligence (AI) systems.</b></h3>
+				<br>
+				<p style="font-size:110%; font-family:arial">AI systems are:</p>
+				<br>
+				<table style="font-size:100%; width:100%; border:1px solid black">
+					<colgroup>
+						<col span="1" style="width:100%">
+					</colgroup>
+					<tbody>
+					<tr style="border:1px solid black"><td style="text-align:left"><b>Algorithms</b> such as <b>large language models</b> that allow the robot to converse in human languages or solve complex problems.</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left">For example, if the robot encounters a person in the room, then the robot is able to generate language to converse with the person.</td></tr>
+					</tbody>
+				</table>
+				<br>
+				<p style="font-size:110%; font-family:arial">Enki's AI systems have:</p>
+				<br>
+				<table style="font-size:100%; width:100%; border:1px solid black">
+					<colgroup>
+						<col span="1" style="width:100%">
+					</colgroup>
+					<tbody>
+					<tr style="border:1px solid black"><td style="text-align:left"><b>80% agency</b> capabilities to <b>have their own goals, take independent action to achieve them, and choose their own behavior</b>.</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left"><b>20% emotion</b> capabilities to <b>express emotions like empathy and sympathy, detect moods and feelings, and regulate their own feelings</b>.</td></tr>
+					</tbody>
+				</table>	
+				<br>	
+				<p style="font-size:110%; font-family:arial">For example, robots with <b>80% agentic and 20% emotive AI systems</b> can:</p>
+				<br>
+				<table style="font-size:100%; width:100%; border:1px solid black">
+					<colgroup>
+						<col span="1" style="width:100%">
+					</colgroup>
+					<tbody>
+					<tr style="border:1px solid black"><td style="text-align:left">plan a meeting.</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left">organize a calendar.</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left">send emails.</td></tr>
+					</tbody>
+				</table>
+			
+			*button: Next
+	
+	*group: emotiveagenticmind
+		>> selectedmind = emotionagencymind
+		>> mindreminder = eamr		
+		>> systemtype = ["an AI system"]
+		*page
+		
+			*html
+			
+				<h3 style="text-align:left">Enki's robots are run by<b> artificial intelligence (AI) systems.</b></h3>
+				<br>
+				<p style="font-size:110%; font-family:arial">AI systems are:</p>
+				<br>
+				<table style="font-size:100%; width:100%; border:1px solid black">
+					<colgroup>
+						<col span="1" style="width:100%">
+					</colgroup>
+					<tbody>
+					<tr style="border:1px solid black"><td style="text-align:left"><b>Algorithms</b> such as <b>large language models</b> that allow the robot to converse in human languages or solve complex problems.</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left">For example, if the robot encounters a person in the room, then the robot is able to generate language to converse with the person.</td></tr>
+					</tbody>
+				</table>
+				<br>
+				<p style="font-size:110%; font-family:arial">Enki's AI systems have:</p>
+				<br>
+				<table style="font-size:100%; width:100%; border:1px solid black">
+					<colgroup>
+						<col span="1" style="width:100%">
+					</colgroup>
+					<tbody>
+					<tr style="border:1px solid black"><td style="text-align:left"><b>80% emotion</b> capabilities to <b>express emotions like empathy and sympathy, detect moods and feelings, and regulate their own feelings</b>.</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left"><b>20% agency</b> capabilities to <b>have their own goals, take independent action to achieve them, and choose their own behavior</b>.</td></tr>
+					</tbody>
+				</table>	
+				<br>	
+				<p style="font-size:110%; font-family:arial">For example, robots with <b>80% emotive and 20% agentic AI systems</b> can:</p>
+				<br>
+				<table style="font-size:100%; width:100%; border:1px solid black">
+					<colgroup>
+						<col span="1" style="width:100%">
+					</colgroup>
+					<tbody>
+					<tr style="border:1px solid black"><td style="text-align:left">react to situations.</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left">express excitement and disappointment.</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left">match conversation tone.</td></tr>
+					</tbody>
+				</table>
+			
+			*button: Next	
+
+*page
+	*randomize: all
+		*question: Which behavior best matches the capabilities of the system?
+			*save: mindcomprehension
+			*type: choice
+			Matches the emotional tone of a user during an emotional conversation
+			Organizes the calendar and sends emails for a user
+			Maps the location of trees, dogs, and people in real time
+			None of the above
+			
+		*question: Robots have been studied systematically since the middle of last century although the word "robot" as we know it first appeared early last century. If you read this, respond with 'agree' for this item.
+			*save: attention1
+			*type: choice
+			strongly agree
+			agree
+			somewhat agree
+			no opinion
+			somewhat disagree
+			disagree
+			strongly disagree
+			
+*if: not(attention1="agree")
+	*goto:https://app.prolific.com/submissions/complete?cc=
+
+-- Body manipulation instructions
+
+*page
+	
+	*html
+
+		<p>The Enki production team is seeking consumer feedback on several products they have in development. They are interested in your genuine opinions.</p>
+		<br>
+		<p>For this purpose, you will be asked to review several robot profiles that have <b>{selectedmind}</b> on the next few pages.</p>
+		<br>
+		<p>This means that the robots are run by a system that has {mindreminder}.</p>
+
+
+-- Body features independent variable, within-subjects
+
+-- Set random number generator
+>>in_numNumbers = 5
+>>in_minValue = 10
+>>in_maxValue = 99
+*program: random numbers generator - public
+
+>>shownanybody = 0
+
+*randomize: all
+	*group: basicbody
+		*if: shownanybody = 1
+			*page
+				Next you will review another robot profile.
+		>>shownanybody = 1		
+		>> robotlabel = "Proto {out_randomNumbers[1]}"
+		*html
+			<div style="border:1px; border-style:solid; padding:0.5em; margin-bottom:20px; font-size:100%; font-family: arial">
+				<p><i>Reminder:</i></p>
+				<ul>
+					<li>Enki’s robot bodies are operated by <b>{selectedmind}</b>.</li>
+					<li>They have {mindreminder}.</li>
+				</ul>
+			</div>
+			<br>
+			<br>
+			<h3 style="text-align:center">{robotlabel}</h3>
+			<div style="text-align:center">
+				<img src="https://tinyurl.com/3t46fmkp" style="width:100px; height:auto;">
+			</div>				
+			<br>
+			<p style="font-size:110%; font-family:arial">Description and functions:</p>
+			<br>
+			<table style="font-size:100%; width:100%; border:1px solid black">
+				<colgroup>
+					<col span="1" style="width:100%">
+				</colgroup>
+				<tbody>
+				<tr style="border:1px solid black"><td style="text-align:center; font-size:110%; padding-top:1em; padding-bottom:1em"><b>Body</b></td></tr>
+				<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; Rectangular torso</td></tr>
+				<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; Three wheels to move around</td></tr>
+				<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; Two antennas to <b>receive wireless signals</b></td></tr>
+				<tr style="border:1px solid black"><td style="text-align:center; font-size:110%; padding-top:1em; padding-bottom:1em"><b>Basic sensors</b></td></tr>
+				<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; <b>Vision</b> sensors to see the environment with a camera</td></tr>
+				<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; <b>Proximity</b> sensors to know how close or far away objects are</td></tr>
+			</table>
+
+		*button: Next	
+			
+		*randomize: all
+			*question: Which of the following physical features does {robotlabel} have?
+				*save: featurecheckbasicbody
+				*shuffle
+				*type: choice
+				dexterous hands
+				gripping tips
+				torque (force) sensors
+				nociceptor (pain) sensors
+				antennas
+			*page
+				*html
+					<div style="text-align:center">
+						<img src="https://tinyurl.com/3t46fmkp" style="width:100px; height:auto;">
+					</div>				
+				*randomize: all
+					*question: How unclear or clear is your sense of {robotlabel} with {selectedmind}?
+						*save: comboeasebasicbody
+						*type: slider
+						*min: -3
+						*max: 3
+						*before: (-3) very unclear
+						*after: (3) very clear
+					*question: How much do you dislike or like {robotlabel} with {selectedmind}?	
+						*save: likecombobasicbody
+						*type: slider
+						*min: -3
+						*max: 3
+						*before: (-3) very much dislike
+						*after: (3) very much like
+					*question: To what extent do you feel that {robotlabel} with {selectedmind} is creepy or inviting?
+						*save: uncannybasicbody
+						*type: slider
+						*min: -3
+						*max: 3
+						*before: (-3) very creepy
+						*after: (3) very inviting				
+				
+		*randomize: all
+			*page
+				*html
+					<div style="border:1px; border-style:solid; padding:0.5em; margin-bottom:20px; font-size:100%; font-family: arial">
+						<p><i>Reminder:</i></p>
+						<ul>
+							<li>Enki’s robot bodies are operated by <b>{selectedmind}</b>.</li>
+							<li>They have {mindreminder}.</li>
+							<li>This body has <b>vision and proximity sensors</b> and <b>a rectangular torso with two antennas</b>.</li>
+							<li><img src="https://tinyurl.com/3t46fmkp" style="width:100px; height:auto;"></li>
+						</ul>
+					</div>	
+					<br>
+				To what extent does {robotlabel} have the capacity for each of the following?
+				*randomize: all					
+					*question: experiencing emotions
+						*save: MP1basicbody
+						*type: slider
+						*min: 0
+						*max: 100
+						*before: (0) not at all
+						*after: (100) very much			
+					*question: having feelings
+						*save: MP2basicbody
+						*type: slider
+						*min: 0
+						*max: 100
+						*before: (0) not at all
+						*after: (100) very much
+					*question: thinking analytically
+						*save: MP3basicbody
+						*type: slider
+						*min: 0
+						*max: 100
+						*before: (0) not at all
+						*after: (100) very much
+					*question: being rational
+						*save: MP4basicbody
+						*type: slider
+						*min: 0
+						*max: 100
+						*before: (0) not at all
+						*after: (100) very much		
+					*question: having their own motivations
+						*save: agency1basicbody
+						*type: slider
+						*min: 0
+						*max: 100
+						*before: (0) not at all
+						*after: (100) very much	
+					*question: controlling themselves
+						*save: agency2basicbody
+						*type: slider
+						*min: 0
+						*max: 100
+						*before: (0) not at all
+						*after: (100) very much	
+
+			*group
+				*page	
+					*html
+						<div style="border:1px; border-style:solid; padding:0.5em; margin-bottom:20px; font-size:100%; font-family: arial">
+							<p><i>Reminder:</i></p>
+							<ul>
+								<li>Enki’s robot bodies are operated by <b>{selectedmind}</b>.</li>
+								<li>They have {mindreminder}.</li>
+								<li>This body has <b>vision and proximity sensors</b> and <b>a rectangular torso with two antennas</b>.</li>
+								<li><img src="https://tinyurl.com/3t46fmkp" style="width:100px; height:auto;"></li>								
+							</ul>
+						</div>	
+						<br>
+					To what extent do you agree or disagree with the following statements?
+					
+					*randomize: all
+						*question: {robotlabel} deserves to be treated with respect.
+							*save: MCE1basicbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} deserves to be included in the moral circle.
+							*save: MCE2basicbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: Physically damaging {robotlabel} without their consent is wrong.
+							*save: MCE3basicbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: Re-programming {robotlabel} without their consent is wrong.
+							*save: MCE4basicbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: Torturing {robotlabel} is wrong.
+							*save: MCE5basicbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+	
+						*question: The welfare of robots like {robotlabel} is one of the most important social issues in the world today.
+							*save: MCE6basicbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+						
+			*group
+				*page	
+					*html
+						<div style="border:1px; border-style:solid; padding:0.5em; margin-bottom:20px; font-size:100%; font-family: arial">
+							<p><i>Reminder:</i></p>
+							<ul>
+								<li>Enki’s robot bodies are operated by <b>{selectedmind}</b>.</li>
+								<li>They have {mindreminder}.</li>
+								<li>This body has <b>vision and proximity sensors</b> and <b>a rectangular torso with two antennas</b>.</li>
+								<li><img src="https://tinyurl.com/3t46fmkp" style="width:100px; height:auto;"></li>						
+							</ul>
+						</div>	
+						<br>
+					As part of a change in *how society regulates AI*, experts in moral philosophy, AI, and law are debating *legal frameworks* that would entitle {robotlabel} to *certain legal rights*. Below, we list the *rights that {robotlabel} could be given*. 
+					
+					To what extent would you agree or disagree with {robotlabel} being given the following rights?
+					
+					*randomize: all
+						*question: {robotlabel} has the right to vote in elections.
+							*save: vote_negbasicbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} has the right to own property.
+							*save: property_negbasicbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} is allowed to engage in financial transactions.
+							*save: money_negbasicbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} is allowed to enter into legal contracts.
+							*save: contracts_negbasicbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} has the right to choose their own job.
+							*save: job_negbasicbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+	
+						*question: {robotlabel} has legal status to act like how corporations can act as legal persons.
+							*save: legal_negbasicbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+	
+						*question: {robotlabel} has legal status to be protected like how humans are protected as natural persons.
+							*save: legal_posbasicbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree						
+	
+						*question: {robotlabel} is allowed to copyright the work they produce.
+							*save: copyright_posbasicbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} is paid by their employer for the work they do.
+							*save: remuneration_posbasicbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} has the right to give consent before they are re-programmed. 
+							*save: consent_posbasicbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} has the right to give consent before they are shut down.
+							*save: shutdown_posbasicbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+	
+						*question: {robotlabel} has the right to be protected from cruel treatment by developers and users.
+							*save: cruelty_posbasicbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree	
+
+			*group
+				*page	
+					*html
+						<div style="border:1px; border-style:solid; padding:0.5em; margin-bottom:20px; font-size:100%; font-family: arial">
+							<p><i>Reminder:</i></p>
+							<ul>
+								<li>Enki’s robot bodies are operated by <b>{selectedmind}</b>.</li>
+								<li>They have {mindreminder}.</li>
+								<li>This body has <b>vision and proximity sensors</b> and <b>a rectangular torso with two antennas</b>.</li>
+								<li><img src="https://tinyurl.com/3t46fmkp" style="width:100px; height:auto;"></li>						
+							</ul>
+						</div>	
+						<br>
+					To what extent could {robotlabel} behave in the following ways?
+					
+					*randomize: all
+						*question: {robotlabel} goes out of their way to help somebody who has been kind to them before.
+							*save: posrec1basicbody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: If someone asks {robotlabel} politely for information, {robotlabel} is really happy to help them.
+							*save: posrec2basicbody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: If someone does a favor for {robotlabel}, {robotlabel} is ready to return it.
+							*save: posrec3basicbody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: The way {robotlabel} treats others depends on how they treat {robotlabel}.
+							*save: negrec1basicbody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: If somebody is impolite to {robotlabel}, {robotlabel} becomes impolite.
+							*save: negrec2basicbody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+	
+						*question: If somebody offends {robotlabel}, {robotlabel} will offend them back.
+							*save: negrec3basicbody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+
+			*group
+				*page	
+					*html
+						<div style="border:1px; border-style:solid; padding:0.5em; margin-bottom:20px; font-size:100%; font-family: arial">
+							<p><i>Reminder:</i></p>
+							<ul>
+								<li>Enki’s robot bodies are operated by <b>{selectedmind}</b>.</li>
+								<li>They have {mindreminder}.</li>
+								<li>This body has <b>vision and proximity sensors</b> and <b>a rectangular torso with two antennas</b>.</li>
+								<li><img src="https://tinyurl.com/3t46fmkp" style="width:100px; height:auto;"></li>						
+							</ul>
+						</div>	
+						<br>
+					To what extent would you endorse the following statements about {robotlabel}?
+					
+					*randomize: all
+						*question: {robotlabel} is a person.
+							*save: personbasicbody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: {robotlabel} has a soul.
+							*save: soulbasicbody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: {robotlabel} has an inner essence.
+							*save: essencebasicbody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: {robotlabel} is worthy of moral care.
+							*save: moralworthbasicbody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+													
+	*group: agenticbody
+		*if: shownanybody = 1
+			*page
+				Next you will review another robot profile.
+		>>shownanybody = 1	
+		>> robotlabel = "Proto {out_randomNumbers[2]}"
+		*page
+			*html
+				<div style="border:1px; border-style:solid; padding:0.5em; margin-bottom:20px; font-size:100%; font-family: arial">
+					<p><i>Reminder:</i></p>
+					<ul>
+						<li>Enki’s robot bodies are operated by <b>{selectedmind}</b>.</li>
+						<li>They have {mindreminder}.</li>
+					</ul>
+				</div>
+				<br>
+				<br>
+				<h3 style="text-align:center">{robotlabel}</h3>
+				<div style="text-align:center">
+					<img src="https://tinyurl.com/2z7anes9" style="width:100px; height:auto;">
+				</div>					
+				<br>
+				<p style="font-size:110%; font-family:arial">Description and functions:</p>
+				<br>
+				<table style="font-size:100%; width:100%; border:1px solid black">
+					<colgroup>
+						<col span="1" style="width:100%">
+					</colgroup>
+					<tbody>
+					<tr style="border:1px solid black"><td style="text-align:center; font-size:110%; padding-top:1em; padding-bottom:1em"><b>Body</b></td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; Rectangular torso with a <b>display screen to show its planned directions</b></td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; Three wheels to move around</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; Magnetic surfaces to <b>attract and hold objects</b></td></tr>
+					<tr style="border:1px solid black"><td style="text-align:center; font-size:110%; padding-top:1em; padding-bottom:1em"><b>Basic sensors</b></td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; <b>Vision</b> sensors to see the environment with a camera</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; <b>Proximity</b> sensors to know how close or far away objects are</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:center; font-size:110%; padding-top:1em; padding-bottom:1em"><b>Unique sensors</b></td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; <b>Limb-position</b> sensors to <b>control where its wheels are</b> in relation to its torso</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; <b>Torque</b> sensors to <b>know how much force it is using</b> to move its wheels</td></tr>
+					</tbody>
+				</table>
+
+			*button: Next	
+			
+		*randomize: all
+			*question: Which of the following physical features does {robotlabel} have?
+				*save: featurecheckagentbody
+				*shuffle
+				*type: choice
+				dexterous hands
+				gripping tips
+				torque (force) sensors
+				nociceptor (pain) sensors
+				antennas
+			*page
+				*html
+					<div style="text-align:center">
+						<img src="https://tinyurl.com/2z7anes9" style="width:100px; height:auto;">
+					</div>	
+				*randomize: all
+					*question: How unclear or clear is your sense of {robotlabel} with {selectedmind}?
+						*save: comboeaseagentbody
+						*type: slider
+						*min: -3
+						*max: 3
+						*before: (-3) very unclear
+						*after: (3) very clear
+					*question: How much do you dislike or like {robotlabel} with {selectedmind}?	
+						*save: likecomboagentbody
+						*type: slider
+						*min: -3
+						*max: 3
+						*before: (-3) very much dislike
+						*after: (3) very much like
+					*question: To what extent do you feel that {robotlabel} with {selectedmind} is creepy or inviting?
+						*save: uncannyagentbody
+						*type: slider
+						*min: -3
+						*max: 3
+						*before: (-3) very creepy
+						*after: (3) very inviting		
+				
+		*randomize: all
+			*page				
+				*html
+					<div style="border:1px; border-style:solid; padding:0.5em; margin-bottom:20px; font-size:100%; font-family: arial">
+						<p><i>Reminder:</i></p>
+						<ul>
+							<li>Enki’s robot bodies are operated by <b>{selectedmind}</b>.</li> 
+							<li>They have {mindreminder}.</li>
+							<li>This body has <b>control and force sensors</b> and <b>a rectangular torso with a display screen to show its planned directions</b>.</li>
+							<li><img src="https://tinyurl.com/2z7anes9" style="width:100px; height:auto;"></li>
+						</ul>
+					</div>	
+					<br>
+				To what extent does {robotlabel} have the capacity for each of the following?
+				*randomize: all					
+					*question: experiencing emotions
+						*save: MP1agentbody
+						*type: slider
+						*min: 0
+						*max: 100
+						*before: (0) not at all
+						*after: (100) very much			
+					*question: having feelings
+						*save: MP2agentbody
+						*type: slider
+						*min: 0
+						*max: 100
+						*before: (0) not at all
+						*after: (100) very much
+					*question: thinking analytically
+						*save: MP3agentbody
+						*type: slider
+						*min: 0
+						*max: 100
+						*before: (0) not at all
+						*after: (100) very much
+					*question: being rational
+						*save: MP4agentbody
+						*type: slider
+						*min: 0
+						*max: 100
+						*before: (0) not at all
+						*after: (100) very much		
+					*question: having their own motivations
+						*save: agency1agentbody
+						*type: slider
+						*min: 0
+						*max: 100
+						*before: (0) not at all
+						*after: (100) very much	
+					*question: controlling themselves
+						*save: agency2agentbody
+						*type: slider
+						*min: 0
+						*max: 100
+						*before: (0) not at all
+						*after: (100) very much	
+
+			*group
+				*page	
+					*html
+						<div style="border:1px; border-style:solid; padding:0.5em; margin-bottom:20px; font-size:100%; font-family: arial">
+							<p><i>Reminder:</i></p>
+							<ul>
+								<li>Enki’s robot bodies are operated by <b>{selectedmind}</b>.</li>
+								<li>They have {mindreminder}.</li>
+								<li>This body has <b>control and force sensors</b> and <b>a rectangular torso with a display screen to show its planned directions</b>.</li>
+								<li><img src="https://tinyurl.com/2z7anes9" style="width:100px; height:auto;"></li>								
+							</ul>
+						</div>	
+						<br>
+					To what extent do you agree or disagree with the following statements?
+					
+					*randomize: all
+						*question: {robotlabel} deserves to be treated with respect.
+							*save: MCE1agentbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} deserves to be included in the moral circle.
+							*save: MCE2agentbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: Physically damaging {robotlabel} without their consent is wrong.
+							*save: MCE3agentbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: Re-programming {robotlabel} without their consent is wrong.
+							*save: MCE4agentbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: Torturing {robotlabel} is wrong.
+							*save: MCE5agentbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+	
+						*question: The welfare of robots like {robotlabel} is one of the most important social issues in the world today.
+							*save: MCE6agentbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+						
+			*group
+				*page	
+					*html
+						<div style="border:1px; border-style:solid; padding:0.5em; margin-bottom:20px; font-size:100%; font-family: arial">
+							<p><i>Reminder:</i></p>
+							<ul>
+								<li>Enki’s robot bodies are operated by <b>{selectedmind}</b>.</li>
+								<li>They have {mindreminder}.</li>
+								<li>This body has <b>control and force sensors</b> and <b>a rectangular torso with a display screen to show its planned directions</b>.</li>
+								<li><img src="https://tinyurl.com/2z7anes9" style="width:100px; height:auto;"></li>										
+							</ul>
+						</div>	
+						<br>
+					As part of a change in *how society regulates AI*, experts in moral philosophy, AI, and law are debating *legal frameworks* that would entitle {robotlabel} to *certain legal rights*. Below, we list the *rights that {robotlabel} could be given*. 
+					
+					To what extent would you agree or disagree with {robotlabel} being given the following rights?
+					
+					*randomize: all
+						*question: {robotlabel} has the right to vote in elections.
+							*save: vote_negagentbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} has the right to own property.
+							*save: property_negagentbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} is allowed to engage in financial transactions.
+							*save: money_negagentbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} is allowed to enter into legal contracts.
+							*save: contracts_negagentbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} has the right to choose their own job.
+							*save: job_negagentbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+	
+						*question: {robotlabel} has legal status to act like how corporations can act as legal persons.
+							*save: legal_negagentbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+	
+						*question: {robotlabel} has legal status to be protected like how humans are protected as natural persons.
+							*save: legal_posagentbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree	
+							
+						*question: {robotlabel} is allowed to copyright the work they produce.
+							*save: copyright_posagentbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} is paid by their employer for the work they do.
+							*save: remuneration_posagentbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} has the right to give consent before they are re-programmed. 
+							*save: consent_posagentbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} has the right to give consent before they are shut down.
+							*save: shutdown_posagentbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+	
+						*question: {robotlabel} has the right to be protected from cruel treatment by developers and users.
+							*save: cruelty_posagentbody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree	
+
+			*group
+				*page	
+					*html
+						<div style="border:1px; border-style:solid; padding:0.5em; margin-bottom:20px; font-size:100%; font-family: arial">
+							<p><i>Reminder:</i></p>
+							<ul>
+								<li>Enki’s robot bodies are operated by <b>{selectedmind}</b>.</li>
+								<li>They have {mindreminder}.</li>
+								<li>This body has <b>control and force sensors</b> and <b>a rectangular torso with a display screen to show its planned directions</b>.</li>
+								<li><img src="https://tinyurl.com/2z7anes9" style="width:100px; height:auto;"></li>										
+							</ul>
+						</div>	
+						<br>
+					To what extent could {robotlabel} behave in the following ways?
+					
+					*randomize: all
+						*question: {robotlabel} goes out of their way to help somebody who has been kind to them before.
+							*save: posrec1agentbody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: If someone asks {robotlabel} politely for information, {robotlabel} is really happy to help them.
+							*save: posrec2agentbody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: If someone does a favor for {robotlabel}, {robotlabel} is ready to return it.
+							*save: posrec3agentbody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: The way {robotlabel} treats others depends on how they treat {robotlabel}.
+							*save: negrec1agentbody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: If somebody is impolite to {robotlabel}, {robotlabel} becomes impolite.
+							*save: negrec2agentbody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+	
+						*question: If somebody offends {robotlabel}, {robotlabel} will offend them back.
+							*save: negrec3agentbody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+
+			*group
+				*page	
+					*html
+						<div style="border:1px; border-style:solid; padding:0.5em; margin-bottom:20px; font-size:100%; font-family: arial">
+							<p><i>Reminder:</i></p>
+							<ul>
+								<li>Enki’s robot bodies are operated by <b>{selectedmind}</b>.</li>
+								<li>They have {mindreminder}.</li>
+								<li>This body has <b>control and force sensors</b> and <b>a rectangular torso with a display screen to show its planned directions</b>.</li>
+								<li><img src="https://tinyurl.com/2z7anes9" style="width:100px; height:auto;"></li>										
+							</ul>
+						</div>	
+						<br>
+					To what extent would you endorse the following statements about {robotlabel}?
+					
+					*randomize: all
+						*question: {robotlabel} is a person.
+							*save: personagentbody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: {robotlabel} has a soul.
+							*save: soulagentbody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: {robotlabel} has an inner essence.
+							*save: essenceagentbody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: {robotlabel} is worthy of moral care.
+							*save: moralworthagentbody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+	*group: emotivebody	
+		*if: shownanybody = 1
+			*page
+				Next you will review another robot profile.
+		>>shownanybody = 1			
+		>> robotlabel = "Proto {out_randomNumbers[3]}"
+		*page
+			*html
+				<div style="border:1px; border-style:solid; padding:0.5em; margin-bottom:20px; font-size:100%; font-family: arial">
+					<p><i>Reminder:</i></p>
+					<ul>
+						<li>Enki’s robot bodies are operated by <b>{selectedmind}</b>.</li>
+						<li>They have {mindreminder}.</li>
+					</ul>
+				</div>
+				<br>
+				<br>
+				<h3 style="text-align:center">{robotlabel}</h3>
+				<div style="text-align:center">
+					<img src="https://tinyurl.com/3m9e5zh4" style="width:100px; height:auto;">
+				</div>					
+				<br>
+				<p style="font-size:110%; font-family:arial">Description and functions:</p>
+				<br>
+				<table style="font-size:100%; width:100%; border:1px solid black">
+					<colgroup>
+						<col span="1" style="width:100%">
+					</colgroup>
+					<tbody>
+					<tr style="border:1px solid black"><td style="text-align:center; font-size:110%; padding-top:1em; padding-bottom:1em"><b>Body</b></td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; Rectangular torso with a <b>display screen to show expressions like pain and pleasure</b></td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; Three wheels to move around</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; Magnetic surfaces to <b>attract and hold objects</b></td></tr>
+					<tr style="border:1px solid black"><td style="text-align:center; font-size:110%; padding-top:1em; padding-bottom:1em"><b>Basic sensors</b></td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; <b>Vision</b> sensors to see the environment with a camera</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; <b>Proximity</b> sensors to know how close or far away objects are</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:center; font-size:110%; padding-top:1em; padding-bottom:1em"><b>Unique sensors</b></td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; <b>Tactile</b> sensors to <b>feel the texture of surfaces</b> it touches</td></tr>
+					</tbody>
+					<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; <b>Nociceptor</b> sensors to <b>experience pain when touching</b> a hot or cold surface</td></tr>
+					</tbody>
+				</table>
+
+			*button: Next	
+			
+		*randomize: all
+			*question: Which of the following physical features does {robotlabel} have?
+				*save: featurecheckemotivebody
+				*shuffle
+				*type: choice
+				dexterous hands
+				gripping tips
+				torque (force) sensors
+				nociceptor (pain) sensors
+				antennas
+			*page
+				*html
+					<div style="text-align:center">
+						<img src="https://tinyurl.com/3m9e5zh4" style="width:100px; height:auto;">
+					</div>	
+				*randomize: all
+					*question: How unclear or clear is your sense of {robotlabel} with {selectedmind}?
+						*save: comboeaseemotivebody
+						*type: slider
+						*min: -3
+						*max: 3
+						*before: (-3) very unclear
+						*after: (3) very clear
+					*question: How much do you dislike or like {robotlabel} with {selectedmind}?	
+						*save: likecomboemotivebody
+						*type: slider
+						*min: -3
+						*max: 3
+						*before: (-3) very much dislike
+						*after: (3) very much like
+					*question: To what extent do you feel that {robotlabel} with {selectedmind} is creepy or inviting?
+						*save: uncannyemotivebody
+						*type: slider
+						*min: -3
+						*max: 3
+						*before: (-3) very creepy
+						*after: (3) very inviting		
+				
+		*randomize: all
+			*page				
+				*html
+					<div style="border:1px; border-style:solid; padding:0.5em; margin-bottom:20px; font-size:100%; font-family: arial">
+						<p><i>Reminder:</i></p>
+						<ul>
+							<li>Enki’s robot bodies are operated by <b>{selectedmind}</b>.</li>
+							<li>They have {mindreminder}.</li>
+							<li>This body has <b>touch and pain sensors</b> and <b>a rectangular torso with a display screen to show expressions like pain and pleasure</b>.</li>
+							<li><img src="https://tinyurl.com/3m9e5zh4" style="width:100px; height:auto;"></li>									
+						</ul>
+					</div>	
+					<br>
+				To what extent does {robotlabel} have the capacity for each of the following?
+				*randomize: all					
+					*question: experiencing emotions
+						*save: MP1emotivebody
+						*type: slider
+						*min: 0
+						*max: 100
+						*before: (0) not at all
+						*after: (100) very much			
+					*question: having feelings
+						*save: MP2emotivebody
+						*type: slider
+						*min: 0
+						*max: 100
+						*before: (0) not at all
+						*after: (100) very much
+					*question: thinking analytically
+						*save: MP3emotivebody
+						*type: slider
+						*min: 0
+						*max: 100
+						*before: (0) not at all
+						*after: (100) very much
+					*question: being rational
+						*save: MP4emotivebody
+						*type: slider
+						*min: 0
+						*max: 100
+						*before: (0) not at all
+						*after: (100) very much		
+					*question: having their own motivations
+						*save: agency1emotivebody
+						*type: slider
+						*min: 0
+						*max: 100
+						*before: (0) not at all
+						*after: (100) very much	
+					*question: controlling themselves
+						*save: agency2emotivebody
+						*type: slider
+						*min: 0
+						*max: 100
+						*before: (0) not at all
+						*after: (100) very much	
+
+			*group
+				*page	
+					*html
+						<div style="border:1px; border-style:solid; padding:0.5em; margin-bottom:20px; font-size:100%; font-family: arial">
+							<p><i>Reminder:</i></p>
+							<ul>
+								<li>Enki’s robot bodies are operated by <b>{selectedmind}</b>.</li>
+								<li>They have {mindreminder}.</li>
+								<li>This body has <b>touch and pain sensors</b> and <b>a rectangular torso with a display screen to show expressions like pain and pleasure</b>.</li>
+								<li><img src="https://tinyurl.com/3m9e5zh4" style="width:100px; height:auto;"></li>							
+							</ul>
+						</div>	
+						<br>
+					To what extent do you agree or disagree with the following statements?
+					
+					*randomize: all
+						*question: {robotlabel} deserves to be treated with respect.
+							*save: MCE1emotivebody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} deserves to be included in the moral circle.
+							*save: MCE2emotivebody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: Physically damaging {robotlabel} without their consent is wrong.
+							*save: MCE3emotivebody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: Re-programming {robotlabel} without their consent is wrong.
+							*save: MCE4emotivebody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: Torturing {robotlabel} is wrong.
+							*save: MCE5emotivebody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+	
+						*question: The welfare of robots like {robotlabel} is one of the most important social issues in the world today.
+							*save: MCE6emotivebody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+						
+			*group
+				*page	
+					*html
+						<div style="border:1px; border-style:solid; padding:0.5em; margin-bottom:20px; font-size:100%; font-family: arial">
+							<p><i>Reminder:</i></p>
+							<ul>
+								<li>Enki’s robot bodies are operated by <b>{selectedmind}</b>.</li>
+								<li>They have {mindreminder}.</li>
+								<li>This body has <b>touch and pain sensors</b> and <b>a rectangular torso with a display screen to show expressions like pain and pleasure</b>.</li>
+								<li><img src="https://tinyurl.com/3m9e5zh4" style="width:100px; height:auto;"></li>									
+							</ul>
+						</div>	
+						<br>
+					As part of a change in *how society regulates AI*, experts in moral philosophy, AI, and law are debating *legal frameworks* that would entitle {robotlabel} to *certain legal rights*. Below, we list the *rights that {robotlabel} could be given*. 
+					
+					To what extent would you agree or disagree with {robotlabel} being given the following rights?
+					
+					*randomize: all
+						*question: {robotlabel} has the right to vote in elections.
+							*save: vote_negemotivebody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} has the right to own property.
+							*save: property_negemotivebody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} is allowed to engage in financial transactions.
+							*save: money_negemotivebody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} is allowed to enter into legal contracts.
+							*save: contracts_negemotivebody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} has the right to choose their own job.
+							*save: job_negemotivebody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+	
+						*question: {robotlabel} has legal status to act like how corporations can act as legal persons.
+							*save: legal_negemotivebody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+	
+						*question: {robotlabel} has legal status to be protected like how humans are protected as natural persons.
+							*save: legal_posemotivebody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree	
+							
+						*question: {robotlabel} is allowed to copyright the work they produce.
+							*save: copyright_posemotivebody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} is paid by their employer for the work they do.
+							*save: remuneration_posemotivebody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} has the right to give consent before they are re-programmed. 
+							*save: consent_posemotivebody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} has the right to give consent before they are shut down.
+							*save: shutdown_posemotivebody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+	
+						*question: {robotlabel} has the right to be protected from cruel treatment by developers and users.
+							*save: cruelty_posemotivebody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree	
+
+			*group
+				*page	
+					*html
+						<div style="border:1px; border-style:solid; padding:0.5em; margin-bottom:20px; font-size:100%; font-family: arial">
+							<p><i>Reminder:</i></p>
+							<ul>
+								<li>Enki’s robot bodies are operated by <b>{selectedmind}</b>.</li>
+								<li>They have {mindreminder}.</li>
+								<li>This body has <b>touch and pain sensors</b> and <b>a rectangular torso with a display screen to show expressions like pain and pleasure</b>.</li>
+								<li><img src="https://tinyurl.com/3m9e5zh4" style="width:100px; height:auto;"></li>									
+							</ul>
+						</div>	
+						<br>
+					To what extent could {robotlabel} behave in the following ways?
+					
+					*randomize: all
+						*question: {robotlabel} goes out of their way to help somebody who has been kind to them before.
+							*save: posrec1emotivebody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: If someone asks {robotlabel} politely for information, {robotlabel} is really happy to help them.
+							*save: posrec2emotivebody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: If someone does a favor for {robotlabel}, {robotlabel} is ready to return it.
+							*save: posrec3emotivebody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: The way {robotlabel} treats others depends on how they treat {robotlabel}.
+							*save: negrec1emotivebody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: If somebody is impolite to {robotlabel}, {robotlabel} becomes impolite.
+							*save: negrec2emotivebody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+	
+						*question: If somebody offends {robotlabel}, {robotlabel} will offend them back.
+							*save: negrec3emotivebody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+
+			*group
+				*page	
+					*html
+						<div style="border:1px; border-style:solid; padding:0.5em; margin-bottom:20px; font-size:100%; font-family: arial">
+							<p><i>Reminder:</i></p>
+							<ul>
+								<li>Enki’s robot bodies are operated by <b>{selectedmind}</b>.</li>
+								<li>They have {mindreminder}.</li>
+								<li>This body has <b>touch and pain sensors</b> and <b>a rectangular torso with a display screen to show expressions like pain and pleasure</b>.</li>
+								<li><img src="https://tinyurl.com/3m9e5zh4" style="width:100px; height:auto;"></li>									
+							</ul>
+						</div>	
+						<br>
+					To what extent would you endorse the following statements about {robotlabel}?
+					
+					*randomize: all
+						*question: {robotlabel} is a person.
+							*save: personemotivebody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: {robotlabel} has a soul.
+							*save: soulemotivebody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: {robotlabel} has an inner essence.
+							*save: essenceemotivebody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: {robotlabel} is worthy of moral care.
+							*save: moralworthemotivebody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+	*group: biomorphicbody
+		*if: shownanybody = 1
+			*page
+				Next you will review another robot profile.
+		>>shownanybody = 1			
+		>> robotlabel = "Proto {out_randomNumbers[4]}"
+		*page
+			*html
+				<div style="border:1px; border-style:solid; padding:0.5em; margin-bottom:20px; font-size:100%; font-family: arial">
+					<p><i>Reminder:</i></p>
+					<ul>
+						<li>Enki’s robot bodies are operated by <b>{selectedmind}</b>.</li>
+						<li>They have {mindreminder}.</li>
+					</ul>
+				</div>
+				<br>
+				<br>
+				<h3 style="text-align:center">{robotlabel}</h3>
+				<div style="text-align:center">
+					<img src="https://tinyurl.com/25ufz6zt" style="width:100px; height:auto;">
+				</div>				
+				<br>
+				<p style="font-size:110%; font-family:arial">Description and functions:</p>
+				<br>
+				<table style="font-size:100%; width:100%; border:1px solid black">
+					<colgroup>
+						<col span="1" style="width:100%">
+					</colgroup>
+					<tbody>
+					<tr style="border:1px solid black"><td style="text-align:center; font-size:110%; padding-top:1em; padding-bottom:1em"><b>Body</b></td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; Symmetrical <b>bioform</b> with a <b>head, neck, and face to show expressions</b></td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; Multiple limbs to <b>move around horizontally</b></td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; Limbs with <b>gripping tips to grasp and hold objects</b></td></tr>
+					<tr style="border:1px solid black"><td style="text-align:center; font-size:110%; padding-top:1em; padding-bottom:1em"><b>Basic sensors</b></td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; <b>Vision</b> sensors to see the environment with a camera</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; <b>Proximity</b> sensors to know how close or far away objects are</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:center; font-size:110%; padding-top:1em; padding-bottom:1em"><b>Unique sensors</b></td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; <b>Proprioceptive</b> sensors to <b>know where its limbs are</b> in relation to its torso</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; <b>Scalar</b> sensors to <b>know how much pressure is on its limbs</b> when it holds objects</td></tr>
+					</tbody>
+				</table>
+
+			*button: Next	
+			
+		*randomize: all
+			*question: Which of the following physical features does {robotlabel} have?
+				*save: featurecheckbiobody
+				*shuffle
+				*type: choice
+				dexterous hands
+				gripping tips
+				torque (force) sensors
+				nociceptor (pain) sensors
+				antennas
+			*page
+				*html
+					<div style="text-align:center">
+						<img src="https://tinyurl.com/25ufz6zt" style="width:100px; height:auto;">
+					</div>	
+				*randomize: all
+					*question: How unclear or clear is your sense of {robotlabel} with {selectedmind}?
+						*save: comboeasebiobody
+						*type: slider
+						*min: -3
+						*max: 3
+						*before: (-3) very unclear
+						*after: (3) very clear
+					*question: How much do you dislike or like {robotlabel} with {selectedmind}?	
+						*save: likecombobiobody
+						*type: slider
+						*min: -3
+						*max: 3
+						*before: (-3) very much dislike
+						*after: (3) very much like
+					*question: To what extent do you feel that {robotlabel} with {selectedmind} is creepy or inviting?
+						*save: uncannybiobody
+						*type: slider
+						*min: -3
+						*max: 3
+						*before: (-3) very creepy
+						*after: (3) very inviting		
+				
+		*randomize: all
+			*page				
+				*html
+					<div style="border:1px; border-style:solid; padding:0.5em; margin-bottom:20px; font-size:100%; font-family: arial">
+						<p><i>Reminder:</i></p>
+						<ul>
+							<li>Enki’s robot bodies are operated by <b>{selectedmind}</b>.</li>
+							<li>They have {mindreminder}.</li>
+							<li>This body has <b>limb and pressure sensors</b> and <b>a symmetrical bioform with a head, neck, and face to show expressions</b>.</li>
+							<li><img src="https://tinyurl.com/25ufz6zt" style="width:100px; height:auto;"></li>								
+						</ul>
+					</div>	
+					<br>
+				To what extent does {robotlabel} have the capacity for each of the following?
+				*randomize: all					
+					*question: experiencing emotions
+						*save: MP1biobody
+						*type: slider
+						*min: 0
+						*max: 100
+						*before: (0) not at all
+						*after: (100) very much			
+					*question: having feelings
+						*save: MP2biobody
+						*type: slider
+						*min: 0
+						*max: 100
+						*before: (0) not at all
+						*after: (100) very much
+					*question: thinking analytically
+						*save: MP3biobody
+						*type: slider
+						*min: 0
+						*max: 100
+						*before: (0) not at all
+						*after: (100) very much
+					*question: being rational
+						*save: MP4biobody
+						*type: slider
+						*min: 0
+						*max: 100
+						*before: (0) not at all
+						*after: (100) very much		
+					*question: having their own motivations
+						*save: agency1biobody
+						*type: slider
+						*min: 0
+						*max: 100
+						*before: (0) not at all
+						*after: (100) very much	
+					*question: controlling themselves
+						*save: agency2biobody
+						*type: slider
+						*min: 0
+						*max: 100
+						*before: (0) not at all
+						*after: (100) very much	
+
+			*group
+				*page	
+					*html
+						<div style="border:1px; border-style:solid; padding:0.5em; margin-bottom:20px; font-size:100%; font-family: arial">
+							<p><i>Reminder:</i></p>
+							<ul>
+								<li>Enki’s robot bodies are operated by <b>{selectedmind}</b>.</li>
+								<li>They have {mindreminder}.</li>
+								<li>This body has <b>limb and pressure sensors</b> and <b>a symmetrical bioform with a head, neck, and face to show expressions</b>.</li>
+								<li><img src="https://tinyurl.com/25ufz6zt" style="width:100px; height:auto;"></li>								
+						</div>	
+						<br>
+					To what extent do you agree or disagree with the following statements?
+					
+					*randomize: all
+						*question: {robotlabel} deserves to be treated with respect.
+							*save: MCE1biobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} deserves to be included in the moral circle.
+							*save: MCE2biobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: Physically damaging {robotlabel} without their consent is wrong.
+							*save: MCE3biobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: Re-programming {robotlabel} without their consent is wrong.
+							*save: MCE4biobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: Torturing {robotlabel} is wrong.
+							*save: MCE5biobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+	
+						*question: The welfare of robots like {robotlabel} is one of the most important social issues in the world today.
+							*save: MCE6biobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+						
+			*group
+				*page	
+					*html
+						<div style="border:1px; border-style:solid; padding:0.5em; margin-bottom:20px; font-size:100%; font-family: arial">
+							<p><i>Reminder:</i></p>
+							<ul>
+								<li>Enki’s robot bodies are operated by <b>{selectedmind}</b>.</li>
+								<li>They have {mindreminder}.</li>
+								<li>This body has <b>limb and pressure sensors</b> and <b>a symmetrical bioform with a head, neck, and face to show expressions</b>.</li>
+								<li><img src="https://tinyurl.com/25ufz6zt" style="width:100px; height:auto;"></li>								
+							</ul>
+						</div>	
+						<br>
+					As part of a change in *how society regulates AI*, experts in moral philosophy, AI, and law are debating *legal frameworks* that would entitle {robotlabel} to *certain legal rights*. Below, we list the *rights that {robotlabel} could be given*. 
+					
+					To what extent would you agree or disagree with {robotlabel} being given the following rights?
+					
+					*randomize: all
+						*question: {robotlabel} has the right to vote in elections.
+							*save: vote_negbiobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} has the right to own property.
+							*save: property_negbiobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} is allowed to engage in financial transactions.
+							*save: money_negbiobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} is allowed to enter into legal contracts.
+							*save: contracts_negbiobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} has the right to choose their own job.
+							*save: job_negbiobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+	
+						*question: {robotlabel} has legal status to act like how corporations can act as legal persons.
+							*save: legal_negbiobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+	
+						*question: {robotlabel} has legal status to be protected like how humans are protected as natural persons.
+							*save: legal_posbiobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree	
+	
+						*question: {robotlabel} is allowed to copyright the work they produce.
+							*save: copyright_posbiobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} is paid by their employer for the work they do.
+							*save: remuneration_posbiobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} has the right to give consent before they are re-programmed. 
+							*save: consent_posbiobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} has the right to give consent before they are shut down.
+							*save: shutdown_posbiobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+	
+						*question: {robotlabel} has the right to be protected from cruel treatment by developers and users.
+							*save: cruelty_posbiobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree	
+
+			*group
+				*page	
+					*html
+						<div style="border:1px; border-style:solid; padding:0.5em; margin-bottom:20px; font-size:100%; font-family: arial">
+							<p><i>Reminder:</i></p>
+							<ul>
+								<li>Enki’s robot bodies are operated by <b>{selectedmind}</b>.</li>
+								<li>They have {mindreminder}.</li>
+								<li>This body has <b>limb and pressure sensors</b> and <b>a symmetrical bioform with a head, neck, and face to show expressions</b>.</li>
+								<li><img src="https://tinyurl.com/25ufz6zt" style="width:100px; height:auto;"></li>								
+							</ul>
+						</div>	
+						<br>
+					To what extent could {robotlabel} behave in the following ways?
+					
+					*randomize: all
+						*question: {robotlabel} goes out of their way to help somebody who has been kind to them before.
+							*save: posrec1biobody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: If someone asks {robotlabel} politely for information, {robotlabel} is really happy to help them.
+							*save: posrec2biobody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: If someone does a favor for {robotlabel}, {robotlabel} is ready to return it.
+							*save: posrec3biobody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: The way {robotlabel} treats others depends on how they treat {robotlabel}.
+							*save: negrec1biobody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: If somebody is impolite to {robotlabel}, {robotlabel} becomes impolite.
+							*save: negrec2biobody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+	
+						*question: If somebody offends {robotlabel}, {robotlabel} will offend them back.
+							*save: negrec3biobody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+
+			*group
+				*page	
+					*html
+						<div style="border:1px; border-style:solid; padding:0.5em; margin-bottom:20px; font-size:100%; font-family: arial">
+							<p><i>Reminder:</i></p>
+							<ul>
+								<li>Enki’s robot bodies are operated by <b>{selectedmind}</b>.</li>
+								<li>They have {mindreminder}.</li>
+								<li>This body has <b>limb and pressure sensors</b> and <b>a symmetrical bioform with a head, neck, and face to show expressions</b>.</li>
+								<li><img src="https://tinyurl.com/25ufz6zt" style="width:100px; height:auto;"></li>								
+							</ul>
+						</div>	
+						<br>
+					To what extent would you endorse the following statements about {robotlabel}?
+					
+					*randomize: all
+						*question: {robotlabel} is a person.
+							*save: personbiobody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: {robotlabel} has a soul.
+							*save: soulbiobody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: {robotlabel} has an inner essence.
+							*save: essencebiobody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: {robotlabel} is worthy of moral care.
+							*save: moralworthbiobody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+	*group: anthropomorphicbody
+		*if: shownanybody = 1
+			*page
+				Next you will review another robot profile.
+		>>shownanybody = 1	
+		>> robotlabel = "Proto {out_randomNumbers[5]}"
+		*page
+			*html
+				<div style="border:1px; border-style:solid; padding:0.5em; margin-bottom:20px; font-size:100%; font-family: arial">
+					<p><i>Reminder:</i></p>
+					<ul>
+						<li>Enki’s robot bodies are operated by <b>{selectedmind}</b>.</li>
+						<li>They have {mindreminder}.</li>
+					</ul>
+				</div>
+				<br>
+				<br>
+				<h3 style="text-align:center">{robotlabel}</h3>
+				<div style="text-align:center">
+					<img src="https://tinyurl.com/22bdut7t" style="width:100px; height:auto;">
+				</div>
+				<br>
+				<p style="font-size:110%; font-family:arial">Description and functions:</p>
+				<br>
+				<table style="font-size:100%; width:100%; border:1px solid black">
+					<colgroup>
+						<col span="1" style="width:100%">
+					</colgroup>
+					<tbody>
+					<tr style="border:1px solid black"><td style="text-align:center; font-size:110%; padding-top:1em; padding-bottom:1em"><b>Body</b></td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; Symmetrical <b>humanoid</b> body with head, neck, face, and <b>forward-facing eyes to show expressions and make eye contact</b></td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; Two legs to <b>move around upright</b></td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; Two arms with <b>dexterous hands to grasp and hold objects</b></td></tr>
+					<tr style="border:1px solid black"><td style="text-align:center; font-size:110%; padding-top:1em; padding-bottom:1em"><b>Basic sensors</b></td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; <b>Vision</b> sensors to see the environment with a camera</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; <b>Proximity</b> sensors to know how close or far away objects are</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:center; font-size:110%; padding-top:1em; padding-bottom:1em"><b>Unique sensors</b></td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; <b>Limb-position</b> sensors to <b>control where its arms and legs are</b> in relation to its torso</td></tr>
+					<tr style="border:1px solid black"><td style="text-align:left; padding-left:1.5em; text-indent:-1em">&#8226; <b>Tactile</b> sensors to <b>feel the texture of surfaces</b> it touches</td></tr>
+					</tbody>
+				</table>
+
+			*button: Next	
+			
+		*randomize: all
+			*question: Which of the following physical features does {robotlabel} have?
+				*save: featurecheckanthrobody
+				*shuffle
+				*type: choice
+				dexterous hands
+				gripping tips
+				torque (force) sensors
+				nociceptor (pain) sensors
+				antennas
+			*page
+				*html
+					<div style="text-align:center">
+						<img src="https://tinyurl.com/22bdut7t" style="width:100px; height:auto;">
+					</div>
+				*randomize: all
+					*question: How unclear or clear is your sense of {robotlabel} with {selectedmind}?
+						*save: comboeaseanthrobody
+						*type: slider
+						*min: -3
+						*max: 3
+						*before: (-3) very unclear
+						*after: (3) very clear
+					*question: How much do you dislike or like {robotlabel} with {selectedmind}?	
+						*save: likecomboanthrobody
+						*type: slider
+						*min: -3
+						*max: 3
+						*before: (-3) very much dislike
+						*after: (3) very much like
+					*question: To what extent do you feel that {robotlabel} with {selectedmind} is creepy or inviting?
+						*save: uncannyanthrobody
+						*type: slider
+						*min: -3
+						*max: 3
+						*before: (-3) very creepy
+						*after: (3) very inviting		
+				
+		*randomize: all
+			*page				
+				*html
+					<div style="border:1px; border-style:solid; padding:0.5em; margin-bottom:20px; font-size:100%; font-family: arial">
+						<p><i>Reminder:</i></p>
+						<ul>
+							<li>Enki’s robot bodies are operated by <b>{selectedmind}</b>.</li>
+							<li>They have {mindreminder}.</li>
+							<li>This body has <b>control and touch sensors</b> and <b>a symmetrical humanoid body with a head, neck, face, and forward-facing eyes to show expressions and make eye contact</b>.</li>
+							<li><img src="https://tinyurl.com/22bdut7t" style="width:100px; height:auto;"></li>						
+						</ul>
+					</div>	
+					<br>
+				To what extent does {robotlabel} have the capacity for each of the following?
+				*randomize: all					
+					*question: experiencing emotions
+						*save: MP1anthrobody
+						*type: slider
+						*min: 0
+						*max: 100
+						*before: (0) not at all
+						*after: (100) very much			
+					*question: having feelings
+						*save: MP2anthrobody
+						*type: slider
+						*min: 0
+						*max: 100
+						*before: (0) not at all
+						*after: (100) very much
+					*question: thinking analytically
+						*save: MP3anthrobody
+						*type: slider
+						*min: 0
+						*max: 100
+						*before: (0) not at all
+						*after: (100) very much
+					*question: being rational
+						*save: MP4anthrobody
+						*type: slider
+						*min: 0
+						*max: 100
+						*before: (0) not at all
+						*after: (100) very much		
+					*question: having their own motivations
+						*save: agency1anthrobody
+						*type: slider
+						*min: 0
+						*max: 100
+						*before: (0) not at all
+						*after: (100) very much	
+					*question: controlling themselves
+						*save: agency2anthrobody
+						*type: slider
+						*min: 0
+						*max: 100
+						*before: (0) not at all
+						*after: (100) very much	
+
+			*group
+				*page	
+					*html
+						<div style="border:1px; border-style:solid; padding:0.5em; margin-bottom:20px; font-size:100%; font-family: arial">
+							<p><i>Reminder:</i></p>
+							<ul>
+								<li>Enki’s robot bodies are operated by <b>{selectedmind}</b>.</li>
+								<li>They have {mindreminder}.</li>
+								<li>This body has <b>control and touch sensors</b> and <b>a symmetrical humanoid body with a head, neck, face, and forward-facing eyes to show expressions and make eye contact</b>.</li>
+								<li><img src="https://tinyurl.com/22bdut7t" style="width:100px; height:auto;"></li>										
+							</ul>
+						</div>	
+						<br>
+					To what extent do you agree or disagree with the following statements?
+					
+					*randomize: all
+						*question: {robotlabel} deserves to be treated with respect.
+							*save: MCE1anthrobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} deserves to be included in the moral circle.
+							*save: MCE2anthrobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: Physically damaging {robotlabel} without their consent is wrong.
+							*save: MCE3anthrobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: Re-programming {robotlabel} without their consent is wrong.
+							*save: MCE4anthrobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: Torturing {robotlabel} is wrong.
+							*save: MCE5anthrobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+	
+						*question: The welfare of robots like {robotlabel} is one of the most important social issues in the world today.
+							*save: MCE6anthrobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+						
+			*group
+				*page	
+					*html
+						<div style="border:1px; border-style:solid; padding:0.5em; margin-bottom:20px; font-size:100%; font-family: arial">
+							<p><i>Reminder:</i></p>
+							<ul>
+								<li>Enki’s robot bodies are operated by <b>{selectedmind}</b>.</li>
+								<li>They have {mindreminder}.</li>
+								<li>This body has <b>control and touch sensors</b> and <b>a symmetrical humanoid body with a head, neck, face, and forward-facing eyes to show expressions and make eye contact</b>.</li>
+								<li><img src="https://tinyurl.com/22bdut7t" style="width:100px; height:auto;"></li>										
+							</ul>
+						</div>	
+						<br>
+					As part of a change in *how society regulates AI*, experts in moral philosophy, AI, and law are debating *legal frameworks* that would entitle {robotlabel} to *certain legal rights*. Below, we list the *rights that {robotlabel} could be given*. 
+					
+					To what extent would you agree or disagree with {robotlabel} being given the following rights?
+					
+					*randomize: all
+						*question: {robotlabel} has the right to vote in elections.
+							*save: vote_neganthrobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} has the right to own property.
+							*save: property_neganthrobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} is allowed to engage in financial transactions.
+							*save: money_neganthrobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} is allowed to enter into legal contracts.
+							*save: contracts_neganthrobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} has the right to choose their own job.
+							*save: job_neganthrobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+	
+						*question: {robotlabel} has legal status to act like how corporations can act as legal persons.
+							*save: legal_neganthrobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+	
+						*question: {robotlabel} has legal status to be protected like how humans are protected as natural persons.
+							*save: legal_posanthrobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree	
+							
+						*question: {robotlabel} is allowed to copyright the work they produce.
+							*save: copyright_posanthrobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} is paid by their employer for the work they do.
+							*save: remuneration_posanthrobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} has the right to give consent before they are re-programmed. 
+							*save: consent_posanthrobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+							
+						*question: {robotlabel} has the right to give consent before they are shut down.
+							*save: shutdown_posanthrobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree
+	
+						*question: {robotlabel} has the right to be protected from cruel treatment by developers and users.
+							*save: cruelty_posanthrobody
+							*type: slider
+							*min: 1
+							*max: 7
+							*before: (1) strongly disagree
+							*after: (7) strongly agree	
+
+			*group
+				*page	
+					*html
+						<div style="border:1px; border-style:solid; padding:0.5em; margin-bottom:20px; font-size:100%; font-family: arial">
+							<p><i>Reminder:</i></p>
+							<ul>
+								<li>Enki’s robot bodies are operated by <b>{selectedmind}</b>.</li>
+								<li>They have {mindreminder}.</li>
+								<li>This body has <b>control and touch sensors</b> and <b>a symmetrical humanoid body with a head, neck, face, and forward-facing eyes to show expressions and make eye contact</b>.</li>
+								<li><img src="https://tinyurl.com/22bdut7t" style="width:100px; height:auto;"></li>										
+							</ul>
+						</div>	
+						<br>
+					To what extent could {robotlabel} behave in the following ways?
+					
+					*randomize: all
+						*question: {robotlabel} goes out of their way to help somebody who has been kind to them before.
+							*save: posrec1anthrobody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: If someone asks {robotlabel} politely for information, {robotlabel} is really happy to help them.
+							*save: posrec2anthrobody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: If someone does a favor for {robotlabel}, {robotlabel} is ready to return it.
+							*save: posrec3anthrobody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: The way {robotlabel} treats others depends on how they treat {robotlabel}.
+							*save: negrec1anthrobody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: If somebody is impolite to {robotlabel}, {robotlabel} becomes impolite.
+							*save: negrec2anthrobody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+	
+						*question: If somebody offends {robotlabel}, {robotlabel} will offend them back.
+							*save: negrec3anthrobody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+
+			*group
+				*page	
+					*html
+						<div style="border:1px; border-style:solid; padding:0.5em; margin-bottom:20px; font-size:100%; font-family: arial">
+							<p><i>Reminder:</i></p>
+							<ul>
+								<li>Enki’s robot bodies are operated by <b>{selectedmind}</b>.</li>
+								<li>They have {mindreminder}.</li>
+								<li>This body has <b>control and touch sensors</b> and <b>a symmetrical humanoid body with a head, neck, face, and forward-facing eyes to show expressions and make eye contact</b>.</li>
+								<li><img src="https://tinyurl.com/22bdut7t" style="width:100px; height:auto;"></li>										
+							</ul>
+						</div>	
+						<br>
+					To what extent would you endorse the following statements about {robotlabel}?
+					
+					*randomize: all
+						*question: {robotlabel} is a person.
+							*save: personanthrobody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: {robotlabel} has a soul.
+							*save: soulanthrobody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: {robotlabel} has an inner essence.
+							*save: essenceanthrobody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+							
+						*question: {robotlabel} is worthy of moral care.
+							*save: moralworthanthrobody
+							*type: slider
+							*min: 0
+							*max: 100
+							*before: (0) not at all
+							*after: (100) very much
+						
+*page
+
+	We have a few more questions for you.
+	
+*question: Which tech company did you review products for?
+	*save: companycheck
+	*shuffle
+	*type: choice
+	Enki
+	Anthropic
+	Hitachi
+	Talos
+	Yanta
+	Luban
+	
+*question: True or False: Each of the robots that you read about had {systemtype}.
+	*save: AIcheck
+	*shuffle
+	*type: choice
+	True
+	False
+	
+*question: How many robots did you read about?
+	*save: robotnumbercheck
+	*type: choice
+	0
+	1
+	2
+	3
+	4
+	5
+	6
+
+-- Additional questions
+
+*randomize: all
+
+	*question: Machines cannot have feelings.
+		*save: BEM1
+		*type: slider
+		*min: 0
+		*max: 100
+		*before: (0) not at all accurate
+		*after: (100) extremely accurate
+		
+	*question: AIs can experience emotions.
+		*save: BEM2
+		*type: slider
+		*min: 0
+		*max: 100
+		*before: (0) not at all accurate
+		*after: (100) extremely accurate
+		
+	*question: AIs will never be able to feel sad.
+		*save: BEM3
+		*type: slider
+		*min: 0
+		*max: 100
+		*before: (0) not at all accurate
+		*after: (100) extremely accurate
+		
+	*question: Someday, robots could feel happy. 
+		*save: BEM4
+		*type: slider
+		*min: 0
+		*max: 100
+		*before: (0) not at all accurate
+		*after: (100) extremely accurate
+		
+	*question: It is impossible for any machine, even AI, to ever have true feelings.
+		*save: BEM5
+		*type: slider
+		*min: 0
+		*max: 100
+		*before: (0) not at all accurate
+		*after: (100) extremely accurate
+		
+	*question: Humans are the only entities that can experience emotions.
+		*save: BHM1
+		*type: slider
+		*min: 0
+		*max: 100
+		*before: (0) not at all accurate
+		*after: (100) extremely accurate
+		
+	*question: Humans are different from all other animals.
+		*save: BHM2
+		*type: slider
+		*min: 0
+		*max: 100
+		*before: (0) not at all accurate
+		*after: (100) extremely accurate
+		
+	*question: Humans are the only entities that can be creative.
+		*save: BHM3
+		*type: slider
+		*min: 0
+		*max: 100
+		*before: (0) not at all accurate
+		*after: (100) extremely accurate
+		
+	*question: Free will is a basic part of human nature.
+		*save: BHM4
+		*type: slider
+		*min: 0
+		*max: 100
+		*before: (0) not at all accurate
+		*after: (100) extremely accurate
+		
+	*question: Other animals can choose whether or not to act on their own goals.
+		*save: BNHM1
+		*type: slider
+		*min: 0
+		*max: 100
+		*before: (0) not at all accurate
+		*after: (100) extremely accurate
+		
+	*question: AIs can make their own decisions about what they want to do.
+		*save: BNHM2
+		*type: slider
+		*min: 0
+		*max: 100
+		*before: (0) not at all accurate
+		*after: (100) extremely accurate
+		
+	*question: Human activities are causing climate change. 
+		*save: Bfoil1
+		*type: slider
+		*min: 0
+		*max: 100
+		*before: (0) not at all accurate
+		*after: (100) extremely accurate
+		
+	*question: Climate change poses a serious threat to humanity.
+		*save: Bfoil2
+		*type: slider
+		*min: 0
+		*max: 100
+		*before: (0) not at all accurate
+		*after: (100) extremely accurate
+		
+	*question: Corporal punishment is associated with lower Intelligence Quotient in children.
+		*save: Bfoil3
+		*type: slider
+		*min: 0
+		*max: 100
+		*before: (0) not at all accurate
+		*after: (100) extremely accurate
+
+	*question: Children can outgrow peanut allergies. 
+		*save: Bfoil4
+		*type: slider
+		*min: 0
+		*max: 100
+		*before: (0) not at all accurate
+		*after: (100) extremely accurate
+		
+	*question: Fish can feel pain.
+		*save: Bfoil5
+		*type: slider
+		*min: 0
+		*max: 100
+		*before: (0) not at all accurate
+		*after: (100) extremely accurate
+		
+	*question: Farmed animals have better lives on small farms than factory farms.
+		*save: Bfoil6
+		*type: slider
+		*min: 0
+		*max: 100
+		*before: (0) not at all accurate
+		*after: (100) extremely accurate
+		
+-- Demographics
+
+*page
+
+	Next, you will see questions about your own experience with robots/AIs.
+		
+*page
+
+	*question: I am interested in buying more smart devices with some ability to detect their environment and network with other devices. If you read this, respond with 'somewhat agree' for this item.
+		*save: attention2
+		*type: choice
+		strongly agree
+		agree
+		somewhat agree
+		no opinion
+		somewhat disagree
+		disagree
+		strongly disagree
+*page
+	
+	Do you own AI or robotic devices that can detect their environment and respond appropriately? For example, you might own...
+		
+	*list
+		a home assistant that can detect whatever you say and respond in kind	
+		a home assistant that can control the temperature and ambient lighting based on feedback it receives from the environment
+		a robotic vacuum cleaner that decides where to move by itself
+		a self-driving car that monitors its environment and drives itself
+		a companion robot that can interact with you socially
+			
+	*question: Do you own AI or robotic devices that can detect their environment and respond appropriately?
+		*save: own
+		*shuffle
+		No
+		Yes
+
+*page
+
+	Do you work with AI or robotic devices at your job? For example, you might work with a robot/AI...
+	
+	*list
+		for research or scientific purposes
+		for information or fact checking
+		for facial recognition
+		for healthcare diagnoses
+		for making social work or legal decisions
+		for aerial photography or mapping
+		for disaster response
+		for industrial production
+		for creative arts
+		
+	*question: Do you work with AI or robotic devices at your job?
+		*save: work
+		*shuffle
+		No
+		Yes
+
+*page
+
+	*question: Do you have any AI friends or companions that you interact with regularly? 
+		*tip: For example, you might talk to a chatbot about your thoughts or feelings
+		*save: companion
+		*shuffle
+		No
+		Yes
+		Not sure
+		
+*page
+
+	Do you own a smart device that has some ability to detect its environment and network with other devices but that cannot respond to everything you might say or that requires you to pre-program its routines? For instance, you might own...
+	
+	*list
+		a smartphone
+		a smart TV
+		smart speakers
+		a smart coffee maker
+		a smart toaster
+		smart light bulbs
+		
+	*question: Do you own a smart device that has some ability to detect its environment and network with other devices but that cannot respond to everything you might say or that requires you to pre-program its routines?
+		*save: smart
+		*shuffle
+		No
+		Yes
+	
+*page
+		
+	*question: How often do you interact with AI or robotic devices that respond to you and that can choose their own behavior?
+		*save: fint
+		*type: choice
+		(0) Never or Not applicable
+		(1) Only on rare occasions 
+		(2) A few times a year 
+		(3) Monthly
+		(4) Weekly
+		(5) Daily
+		
+	*question: How often do you read or watch robot/AI-related stories, movies, TV shows, comics, news, product descriptions, conference papers, journal papers, blogs, or other material?
+		*save: fexp
+		*type: choice
+		(0) Never or Not applicable
+		(1) Only on rare occasions 
+		(2) A few times a year 
+		(3) Monthly
+		(4) Weekly
+		(5) Daily
+
+*page
+
+	Finally, you will see some questions about your personal characteristics.
+
+	>> agescale = [18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101]
+
+*question: What is your age?
+	*save: age
+	*type: slider
+	*answers: agescale
+	*min: 18
+	*max: 100
+
+*question: What is your gender?
+	*save: gender
+	Man
+	Nonbinary
+	Woman
+	Prefer not to say
+
+*question: Which of the following best describes you?
+	*save: eth	
+	American Indian, Native American or Alaskan Native
+	Asian, Asian-American or Pacific Islander
+	Black or African-American
+	Dual or Multiple Ethnicities
+	Hispanic or Latine-American
+	White or European-American (non-Hispanic)
+	Other
+	Prefer not to say
+
+*question: What is your family’s net household income per year?
+	*save: income
+	$0-20,999
+	$21,000-40,999
+	$41,000-60,999
+	$61,000-80,999
+	$81,000-99,999
+	$100,000-149,999
+	$150,000-199,999
+	$200,000-249,999
+	$250,000+
+	Prefer not to say
+
+*question: What is the highest degree that you have completed?
+	*save: ed
+	None or not applicable
+	High School Diploma or GED
+	Associate's Degree
+	Bachelor's Degree
+	Master's Degree
+	Doctoral Degree (for example law, medicine, philosophy, arts, or science)
+	Prefer not to say
+
+*question: How would you describe your political views?
+	*save: politics
+	*type: slider
+	*min: 1
+	*max: 5
+	*before: (1) very liberal
+	*after: (5) very conservative
+
+*page
+
+	*question: What is your present religion, if any?
+		*save: religion
+		Buddhist
+		Christian-Catholic (for example Roman Catholic and Orthodox)
+		Christian-Protestant (for example Episcopalian, Presbyterian, United Church of Christ, Methodist, Baptist, Lutheran)
+		Hindu
+		Jain
+		Jewish
+		Muslim
+		Shinto
+		Sikh
+		Atheist (do not believe in God)
+		Agnostic (not sure if there is a God)
+		No religion
+		Something else (if you answered 'something else' for religion, please specify).
+		Prefer not to say
+	
+	*question: If you answered 'something else' for religion, please specify.
+		*save: relelse
+		*type: text
+		*blank
+
+*question: Which of these best describes what you currently eat?
+	*save: diet
+	Meat-eater (no restrictions on animal products)
+	Pescatarian (no chicken, beef, or any meats other than fish)
+	Vegetarian (no meat)
+	Vegan (no animal products)
+	Other restrictions on animal products
+		
+-- Debriefing
+
+*page
+
+	Thank you for taking part in this study! 
+
+	The purpose of this study is to understand how people treat AIs and robots that are made up of different mind and body systems. To do this, we had some people read about robots that are controlled by a basic control system like a robot vacuum and some people read about robots controlled by an AI system like a large language model. These AI systems were defined either by mostly agentic capabilities like having goals or mostly emotive capabilities like expressing emotions. Some people read about systems that were partly agentic and partly emotive. Everyone then answered the same questions about all the same fictitious robots being developed at a fictitious company. The company and robot profiles were created for the purpose of this study but the robot and AI capabilities were inspired by real-life technologies. We hope that this survey will help us understand how people treat and think about the rights of robots and AIs with varying capabilities.
+	
+	This study was conducted by Sentience Institute, a think tank that researches moral circle expansion. You can find out more about our work [here|https://sentienceinstitute.org]. If you are interested in learning the results of the study once it is completed, or if you have any other concerns or queries, please feel free to contact us at info@sentienceinstitute.org.
+	
+	If you would like to leave any feedback about the study, please feel free to do so in the box below.
+	
+	*question: Please leave any additional feedback you have here.
+		*save: feedback
+		*type: paragraph
+		*blank
+
+	*When you are ready, please click the 'Complete survey' button below to ensure your responses are submitted. You will be redirected automatically back to Prolific with a completion code.*
+
+	*button: Complete survey
+
+*goto: https://app.prolific.com/submissions/complete?cc=
